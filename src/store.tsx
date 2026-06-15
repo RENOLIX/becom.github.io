@@ -29,20 +29,42 @@ const readLocal = <T,>(key: string, fallback: T): T => {
   try { return JSON.parse(localStorage.getItem(key) || "") as T; } catch { return fallback; }
 };
 
+const normalizeImageUrl = (product: Product) => product.imageUrls?.length
+  ? JSON.stringify(product.imageUrls)
+  : product.imageUrl ?? null;
+
+const parseImageUrls = (value: unknown) => {
+  if (!value) return { imageUrl: undefined, imageUrls: undefined };
+  const raw = String(value);
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      const urls = parsed.map(String).filter(Boolean);
+      return { imageUrl: urls[0], imageUrls: urls.length ? urls : undefined };
+    }
+  } catch {
+    // Plain URL from older products.
+  }
+  return { imageUrl: raw, imageUrls: undefined };
+};
+
 const toProductRow = (product: Product) => ({
   id: product.id, name: product.name, category: product.category, age: product.age,
   price: product.price, old_price: product.oldPrice ?? null, rating: product.rating,
   reviews: product.reviews, badge: product.badge ?? null, color: product.color,
-  image_url: product.imageUrl ?? null, sprite: product.sprite, stock: product.stock, description: product.description, skills: product.skills,
+  image_url: normalizeImageUrl(product), sprite: product.sprite, stock: product.stock, description: product.description, skills: product.skills,
 });
 
-const fromProductRow = (row: Record<string, unknown>): Product => ({
-  id: String(row.id), name: String(row.name), category: String(row.category), age: String(row.age),
-  price: Number(row.price), oldPrice: row.old_price == null ? undefined : Number(row.old_price),
-  rating: Number(row.rating), reviews: Number(row.reviews), badge: row.badge ? String(row.badge) : undefined,
-  color: String(row.color), imageUrl: row.image_url ? String(row.image_url) : undefined, sprite: Number(row.sprite), stock: Number(row.stock),
-  description: String(row.description), skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
-});
+const fromProductRow = (row: Record<string, unknown>): Product => {
+  const images = parseImageUrls(row.image_url);
+  return {
+    id: String(row.id), name: String(row.name), category: String(row.category), age: String(row.age),
+    price: Number(row.price), oldPrice: row.old_price == null ? undefined : Number(row.old_price),
+    rating: Number(row.rating), reviews: Number(row.reviews), badge: row.badge ? String(row.badge) : undefined,
+    color: String(row.color), ...images, sprite: Number(row.sprite), stock: Number(row.stock),
+    description: String(row.description), skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
+  };
+};
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(() => readLocal("becom-products", initialProducts));

@@ -1,4 +1,9 @@
 import {
+  motion,
+  useScroll,
+  useTransform,
+} from "motion/react";
+import {
   ArrowLeft,
   ArrowRight,
   Blocks,
@@ -33,13 +38,13 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { createContext, useContext, useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import logo from "./assets/becom-logo.png";
 import hero from "./assets/becom-hero.jpg";
 import sprite from "./assets/product-sprite.jpg";
 import { PressButton } from "./components/PressButton";
-import { ageGroups, type Product } from "./data";
+import { type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
 import { useStore, type AdminRole, type AdminUser } from "./store";
 
@@ -98,10 +103,11 @@ function CartProvider({ children }: { children: ReactNode }) {
 function ProductArt({ product, className = "" }: { product: Product; className?: string }) {
   const x = [0, 33.333, 66.667, 100][product.sprite % 4];
   const y = product.sprite < 4 ? 0 : 100;
+  const customImage = product.imageUrls?.[0] || product.imageUrl;
   return (
     <div
       className={`product-art ${className}`}
-      style={{ backgroundImage: product.imageUrl ? `url(${product.imageUrl})` : `url(${sprite})`, backgroundPosition: product.imageUrl ? "center" : `${x}% ${y}%`, backgroundColor: product.color }}
+      style={{ backgroundImage: customImage ? `url(${customImage})` : `url(${sprite})`, backgroundPosition: customImage ? "center" : `${x}% ${y}%`, backgroundSize: customImage ? "cover" : undefined, backgroundColor: product.color }}
       role="img"
       aria-label={product.name}
     />
@@ -193,6 +199,47 @@ function SectionTitle({ kicker, title, copy }: { kicker: string; title: string; 
   return <div className="section-title"><span className="eyebrow">{kicker}</span><h2>{title}</h2>{copy && <p>{copy}</p>}</div>;
 }
 
+function MagnetBlock() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end center"],
+  });
+
+  const leftX = useTransform(scrollYProgress, [0, 1], [-320, -96]);
+  const rightX = useTransform(scrollYProgress, [0, 1], [320, 96]);
+
+  return (
+    <section ref={sectionRef} className="magnet-block">
+      <div className="shell magnet-inner">
+        <motion.div
+          className="magnet-copy"
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <span className="magnet-pill">Stick-O</span>
+          <h2>La magie des aimants</h2>
+          <p>Ce jouet fascinant attire les enfants vers la construction, l'imagination et le jeu libre. Avec 33 elements Stick-O differents, ils creent des formes, inventent des roles et developpent leur coordination oeil-main, leur pensee spatiale et leurs competences sociales.</p>
+        </motion.div>
+        <div className="magnet-assembly" aria-label="Assemblage magnetique Stick-O">
+          <motion.div className="magnet-piece side" style={{ x: leftX }}>
+            <img src="https://hercules-cdn.com/file_9Le17ZrZK6OQ6jl415qbhewB" alt="Partie gauche Stick-O" draggable={false} />
+          </motion.div>
+          <div className="magnet-piece center">
+            <img src="https://hercules-cdn.com/file_Bw4WLT4yILapjj9NJqOB5I47" alt="Boule centrale Stick-O" draggable={false} />
+          </div>
+          <motion.div className="magnet-piece side" style={{ x: rightX }}>
+            <img src="https://hercules-cdn.com/file_WlbcqvIvtNtDidugmOFasGTa" alt="Partie droite Stick-O" draggable={false} />
+          </motion.div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HomePage() {
   const { products } = useStore();
   const storyProduct = products[4] || products[0];
@@ -213,6 +260,8 @@ function HomePage() {
         <div><Gift /><span><strong>Emballage cadeau</strong><small>Préparé avec amour</small></span></div>
         <div><CircleHelp /><span><strong>Conseils personnalisés</strong><small>On vous guide</small></span></div>
       </section>
+
+      <MagnetBlock />
 
       <section className="section products-section">
         <div className="shell">
@@ -267,12 +316,13 @@ function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   if (!product) return <NotFound />;
   const recommendations = products.filter((item) => item.id !== product.id && item.age === product.age).slice(0, 3);
+  const galleryImages = product.imageUrls?.length ? product.imageUrls : product.imageUrl ? [product.imageUrl] : [];
 
   return (
     <main className="product-page shell">
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft /> Retour à la boutique</button>
       <div className="product-detail">
-        <div className="detail-gallery"><ProductArt product={product} /><div className="thumbnail-row"><button className="active"><ProductArt product={product} /></button><button><ProductArt product={product} /></button><button><ProductArt product={product} /></button></div></div>
+        <div className="detail-gallery"><ProductArt product={product} /><div className="thumbnail-row">{galleryImages.length ? galleryImages.map((url, index) => <button className={index === 0 ? "active" : ""} key={`${url}-${index}`}><span className="gallery-thumb" style={{ backgroundImage: `url(${url})` }} /></button>) : <><button className="active"><ProductArt product={product} /></button><button><ProductArt product={product} /></button><button><ProductArt product={product} /></button></>}</div></div>
         <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{product.name}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span><a href="#avis">{product.reviews} avis vérifiés</a></div><p className="detail-description">{product.description}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div><div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
       </div>
       <section className="detail-story"><div><span className="eyebrow">Dans la boîte</span><h2>Un jeu qui grandit avec eux</h2><p>Le design volontairement simple encourage l'enfant à inventer ses propres règles. Sans écran, sans scénario imposé, avec juste ce qu'il faut pour nourrir sa curiosité.</p></div><div className="detail-stats"><span><strong>+3</strong>compétences stimulées</span><span><strong>100%</strong>jeu libre</span><span><strong>4.9</strong>note familles</span></div></section>
@@ -306,7 +356,7 @@ function AdminPage() {
   const { syncMode } = useStore();
   if (!session) return <AdminLogin onSuccess={() => window.location.reload()} />;
   const titles: Record<string, string> = { dashboard: "Vue d'ensemble", products: "Catalogue produits", orders: "Commandes", team: "Utilisateurs et accès" };
-  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{[["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["team", Users, "Équipe"]].map(([id, Icon, label]) => <button className={section === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><button className="admin-logout" onClick={() => { signOutAdmin(); setSession(null); }}><X /> Déconnexion</button><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[section]}</h1><p className={`sync-status ${syncMode}`}>{syncMode === "supabase" ? "Synchronisé avec Supabase" : "Mode local, en attente des tables Supabase"}</p></div></header>{section === "dashboard" && <Dashboard />}{section === "products" && <AdminProducts />}{section === "orders" && <AdminOrders />}{section === "team" && <AdminUsers />}</section></main>;
+  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{[["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["team", Users, "Équipe"]].map(([id, Icon, label]) => <button className={section === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><button className="admin-logout" onClick={() => { signOutAdmin(); setSession(null); }}><X /> Déconnexion</button><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[section]}</h1><p className={`sync-status ${syncMode}`}>{syncMode === "supabase" ? "actif" : "Mode local"}</p></div></header>{section === "dashboard" && <Dashboard />}{section === "products" && <AdminProducts />}{section === "orders" && <AdminOrders />}{section === "team" && <AdminUsers />}</section></main>;
 }
 
 function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
@@ -330,14 +380,22 @@ function AdminProducts() {
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<Product | null>(null);
   const filtered = products.filter((product) => product.name.toLowerCase().includes(query.toLowerCase()));
-  const emptyProduct = (): Product => ({ id: "", name: "", category: "Éveil", age: "0-2 ans", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", sprite: 0, stock: 0, description: "", skills: [] });
+  const emptyProduct = (): Product => ({ id: "", name: "", category: "BECOM", age: "Tous les âges", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", sprite: 0, stock: 0, description: "", skills: [] });
   const close = () => setDraft(null);
   const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !draft) return;
-    const preview = URL.createObjectURL(file);
-    setDraft({ ...draft, imageUrl: preview });
-    try { setDraft({ ...draft, imageUrl: await uploadProductImage(file) }); } catch { setDraft({ ...draft, imageUrl: preview }); }
+    const files = Array.from(event.target.files || []);
+    if (!files.length || !draft) return;
+    const currentImages = draft.imageUrls?.length ? draft.imageUrls : draft.imageUrl ? [draft.imageUrl] : [];
+    const previews = files.map((file) => URL.createObjectURL(file));
+    setDraft({ ...draft, imageUrl: currentImages[0] || previews[0], imageUrls: [...currentImages, ...previews] });
+    try {
+      const uploaded = await Promise.all(files.map((file) => uploadProductImage(file)));
+      const nextImages = [...currentImages, ...uploaded];
+      setDraft({ ...draft, imageUrl: nextImages[0], imageUrls: nextImages });
+    } catch {
+      const nextImages = [...currentImages, ...previews];
+      setDraft({ ...draft, imageUrl: nextImages[0], imageUrls: nextImages });
+    }
     event.target.value = "";
   };
   const submit = async (event: FormEvent) => {
@@ -381,20 +439,29 @@ function AdminProducts() {
               <ProductArt product={draft} />
               <div>
                 <strong>Photo du produit</strong>
-                <p>Téléversez une photo depuis ordinateur ou téléphone. Elle remplacera le visuel modèle.</p>
-                <label className="upload-button"><ImagePlus /> Téléverser une photo<input accept="image/*" type="file" onChange={uploadImage} /></label>
-                {draft.imageUrl && <button type="button" className="remove-photo" onClick={() => setDraft({ ...draft, imageUrl: undefined })}>Retirer la photo</button>}
+                <p>Téléversez une ou plusieurs photos depuis ordinateur ou téléphone. La première photo devient l'image principale.</p>
+                <label className="upload-button"><ImagePlus /> Téléverser des photos<input accept="image/*" type="file" multiple onChange={uploadImage} /></label>
+                {!!(draft.imageUrls?.length || draft.imageUrl) && (
+                  <div className="admin-photo-strip">
+                    {(draft.imageUrls?.length ? draft.imageUrls : draft.imageUrl ? [draft.imageUrl] : []).map((url, index) => (
+                      <button type="button" key={`${url}-${index}`} onClick={() => {
+                        const source = draft.imageUrls?.length ? draft.imageUrls : draft.imageUrl ? [draft.imageUrl] : [];
+                        const next = source.filter((_, itemIndex) => itemIndex !== index);
+                        setDraft({ ...draft, imageUrl: next[0], imageUrls: next.length ? next : undefined });
+                      }} aria-label={`Retirer la photo ${index + 1}`}>
+                        <img src={url} alt="" />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="admin-form-grid">
               <label>Nom<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
-              <label>Catégorie<input required value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} /></label>
-              <label>Âge<select value={draft.age} onChange={(event) => setDraft({ ...draft, age: event.target.value })}>{ageGroups.slice(1).map((age) => <option key={age}>{age}</option>)}</select></label>
               <label>Prix (DA)<input required min="0" type="number" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
               <label>Ancien prix<input min="0" type="number" value={draft.oldPrice || ""} onChange={(event) => setDraft({ ...draft, oldPrice: event.target.value ? Number(event.target.value) : undefined })} /></label>
               <label>Stock<input required min="0" type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
               <label>Badge<input value={draft.badge || ""} onChange={(event) => setDraft({ ...draft, badge: event.target.value || undefined })} /></label>
-              <label>Visuel de secours<select value={draft.sprite} onChange={(event) => setDraft({ ...draft, sprite: Number(event.target.value) })}>{Array.from({ length: 8 }).map((_, index) => <option value={index} key={index}>Image produit {index + 1}</option>)}</select></label>
               <label className="wide">Description<textarea required rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
               <label className="wide">Compétences, séparées par des virgules<input value={draft.skills.join(", ")} onChange={(event) => setDraft({ ...draft, skills: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label>
             </div>

@@ -10,6 +10,7 @@ export type Product = {
   badge?: string;
   color: string;
   imageUrl?: string;
+  imageUrls?: string[];
   sprite: number;
   stock: number;
   description: string;
