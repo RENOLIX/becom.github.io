@@ -258,9 +258,9 @@ img { display: block; max-width: 100%; }
 
 .editorial-hero { padding-top: 190px; padding-bottom: 110px; text-align: center; }
 .editorial-hero h1 { margin-inline: auto; }.editorial-hero p { max-width: 660px; margin: 25px auto 0; color: #61778a; font-size: 17px; line-height: 1.8; }
-.about-orange-block { padding: 10px 0 120px; overflow: hidden; }
+.about-orange-block { padding: 118px 0 95px; overflow: hidden; }
 .about-orange-inner { min-height: 520px; position: relative; display: grid; grid-template-columns: .95fr 1.05fr; gap: 60px; align-items: center; }
-.about-orange-inner::before { content: ""; position: absolute; z-index: 0; width: min(760px, 72vw); height: 610px; left: min(-190px, -8vw); top: -60px; border-radius: 43% 57% 54% 46% / 48% 42% 58% 52%; background: #ffc12d; transform: rotate(-8deg); box-shadow: inset -28px -28px rgba(255,168,27,.18); }
+.about-orange-inner::before { content: ""; position: absolute; z-index: 0; width: min(820px, 76vw); height: 660px; left: min(-230px, -10vw); top: -170px; border-radius: 43% 57% 54% 46% / 48% 42% 58% 52%; background: #ffc12d; transform: rotate(-8deg); box-shadow: inset -28px -28px rgba(255,168,27,.18); }
 .about-orange-copy, .about-orange-visual { position: relative; z-index: 1; }
 .about-orange-copy { padding: 60px 0 50px; }
 .about-orange-copy .eyebrow { color: #7a5a00; }
@@ -275,6 +275,7 @@ img { display: block; max-width: 100%; }
 .about-orange-card.card-3 { width: 210px; right: 0; bottom: 0; transform: rotate(8deg); }
 .about-orange-card.card-2 .product-art { height: 185px; }
 .about-orange-card.card-3 .product-art { height: 165px; }
+.about-after-orange { padding-top: 35px; }
 .about-grid { padding-bottom: 130px; display: grid; grid-template-columns: .85fr 1.15fr; gap: 100px; align-items: center; }
 .about-art { height: 650px; position: relative; border-radius: 280px 280px 28px 28px; overflow: hidden; background: #edf6e9; }
 .about-art .product-art { height: 100%; transform: scale(1.18); }
@@ -334,7 +335,7 @@ img { display: block; max-width: 100%; }
   .benefit-bar { grid-template-columns: repeat(2, 1fr); padding: 18px 24px; }.benefit-bar > div { min-height: 102px; padding: 18px 30px; }.benefit-bar > div:nth-child(2) { border: 0; }.benefit-bar > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
   .magnet-block { padding: 80px 0; }.magnet-piece.side img { height: 54px; }.magnet-piece.center img { height: 125px; }
   .story-band, .about-grid, .contact-page { gap: 55px; }
-  .about-orange-inner { grid-template-columns: 1fr; gap: 20px; }.about-orange-inner::before { width: 880px; height: 560px; left: -260px; top: -40px; }.about-orange-copy { padding-bottom: 20px; }.about-orange-visual { min-height: 500px; }
+  .about-orange-inner { grid-template-columns: 1fr; gap: 20px; }.about-orange-inner::before { width: 880px; height: 620px; left: -285px; top: -170px; }.about-orange-copy { padding-bottom: 20px; }.about-orange-visual { min-height: 500px; }
   .product-detail { gap: 45px; }.detail-gallery > .product-art { height: 520px; }
   .detail-assurances { grid-template-columns: 1fr; }
   .admin-shell { grid-template-columns: 205px 1fr; }.admin-content { padding: 30px 25px; }.metric-grid { grid-template-columns: repeat(2, 1fr); }
@@ -356,7 +357,7 @@ img { display: block; max-width: 100%; }
   .footer-grid { grid-template-columns: 1fr 1fr; gap: 45px 30px; }.footer-brand { grid-column: 1 / -1; }.footer-bottom { gap: 20px; }
   .page-shell, .product-page, .contact-page { padding-top: 120px; }.shop-heading { display: block; }.shop-heading > p { margin-top: 17px; }.filter-block { grid-template-columns: 1fr; }.filter-chips { overflow-x: auto; flex-wrap: nowrap; padding: 0 0 7px; }.filter-chips button { flex: 0 0 auto; }
   .product-detail { grid-template-columns: 1fr; }.detail-gallery > .product-art { height: 440px; }.detail-copy { padding-top: 0; }.detail-story { padding: 30px; grid-template-columns: 1fr; gap: 25px; }.detail-stats strong { font-size: 24px; }
-  .editorial-hero { padding-top: 150px; padding-bottom: 75px; }.about-orange-block { padding-bottom: 80px; }.about-orange-inner { min-height: 0; }.about-orange-inner::before { width: 730px; height: 510px; left: -250px; top: -35px; }.about-orange-copy h2 { font-size: 56px; }.about-orange-copy p { font-size: 15px; }.about-orange-visual { min-height: 440px; }.about-orange-card.card-1 { width: 300px; right: 28px; }.about-orange-card.card-2 { left: 0; }.about-orange-card.card-3 { right: 0; }.about-grid { grid-template-columns: 1fr; }.about-art { height: 520px; }.about-grid h2 { font-size: 40px; }
+  .editorial-hero { padding-top: 150px; padding-bottom: 75px; }.about-after-orange { padding-top: 20px; }.about-orange-block { padding-top: 105px; padding-bottom: 70px; }.about-orange-inner { min-height: 0; }.about-orange-inner::before { width: 760px; height: 570px; left: -285px; top: -150px; }.about-orange-copy h2 { font-size: 56px; }.about-orange-copy p { font-size: 15px; }.about-orange-visual { min-height: 440px; }.about-orange-card.card-1 { width: 300px; right: 28px; }.about-orange-card.card-2 { left: 0; }.about-orange-card.card-3 { right: 0; }.about-grid { grid-template-columns: 1fr; }.about-art { height: 520px; }.about-grid h2 { font-size: 40px; }
   .contact-page { grid-template-columns: 1fr; padding-bottom: 80px; }.contact-form { padding: 25px; }
   .checkout { padding-top: 120px; grid-template-columns: 1fr; }.order-summary { order: -1; }
   .admin-shell { display: block; }.admin-sidebar { min-height: 0; height: auto; position: static; padding: 15px; flex-direction: row; align-items: center; overflow-x: auto; }.admin-sidebar > img { width: 100px; margin: 0 15px 0 0; }.admin-sidebar nav { display: flex; }.admin-sidebar button { width: 43px; padding: 0; justify-content: center; flex: 0 0 auto; }.admin-sidebar button { font-size: 0; }.admin-sidebar > a { display: none; }.admin-content { padding: 25px 15px; }.admin-user { display: none; }.metric-grid { grid-template-columns: 1fr 1fr; gap: 10px; }.metric-grid > div { padding: 17px; min-height: 120px; }.metric-grid strong { font-size: 20px; }.admin-grid { grid-template-columns: 1fr; }.admin-table-card { padding: 15px; overflow-x: auto; }.admin-table-head .search-field { min-width: 220px; }.admin-table { min-width: 670px; }.orders-table { min-width: 700px; }
@@ -372,7 +373,7 @@ img { display: block; max-width: 100%; }
   .age-grid { grid-template-columns: 1fr; }.age-card { min-height: 145px; }
   .product-grid { grid-template-columns: 1fr 1fr; gap: 12px; }.product-visual { height: 205px; }.heart { width: 33px; height: 33px; }.product-copy { min-height: 145px; padding: 13px; }.product-meta { font-size: 8px; }.product-copy h3 { font-size: 14px; }.product-bottom strong { font-size: 14px; }.add-button { width: 40px; height: 37px; }.cart-add-icon { transform: scale(.9); }
   .story-visual { height: 400px; }.footer-grid { grid-template-columns: 1fr; }.footer-brand { grid-column: auto; }.footer-bottom { flex-direction: column; }
-  .shop-heading h1, .editorial-hero h1, .contact-intro h1 { font-size: 42px; }.about-orange-block { padding-bottom: 65px; }.about-orange-inner::before { width: 610px; height: 470px; left: -285px; top: -20px; }.about-orange-copy { padding-top: 42px; }.about-orange-copy h2 { font-size: 45px; }.about-orange-visual { min-height: 390px; }.about-orange-card.card-1 { width: 245px; right: 8px; top: 8px; }.about-orange-card.card-2 { width: 190px; bottom: 22px; }.about-orange-card.card-3 { width: 165px; bottom: 0; }.about-orange-card .product-art { height: 185px; }.about-orange-card.card-2 .product-art { height: 145px; }.about-orange-card.card-3 .product-art { height: 125px; }.about-orange-card span { font-size: 14px; }.shop-toolbar .filter-label { width: 52px; padding: 0; justify-content: center; font-size: 0; }
+  .shop-heading h1, .editorial-hero h1, .contact-intro h1 { font-size: 42px; }.about-orange-block { padding-top: 92px; padding-bottom: 55px; }.about-orange-inner::before { width: 650px; height: 520px; left: -315px; top: -145px; }.about-orange-copy { padding-top: 32px; }.about-orange-copy h2 { font-size: 45px; }.about-orange-visual { min-height: 390px; }.about-orange-card.card-1 { width: 245px; right: 8px; top: 8px; }.about-orange-card.card-2 { width: 190px; bottom: 22px; }.about-orange-card.card-3 { width: 165px; bottom: 0; }.about-orange-card .product-art { height: 185px; }.about-orange-card.card-2 .product-art { height: 145px; }.about-orange-card.card-3 .product-art { height: 125px; }.about-orange-card span { font-size: 14px; }.shop-toolbar .filter-label { width: 52px; padding: 0; justify-content: center; font-size: 0; }
   .detail-gallery > .product-art { height: 360px; }.purchase-row { grid-template-columns: 100px 1fr; }.purchase { padding: 0 13px; font-size: 12px; }.detail-story { margin-top: 65px; }.detail-stats { gap: 7px; }.detail-stats strong { font-size: 20px; }
   .contact-cards { grid-template-columns: 1fr; }.form-grid { grid-template-columns: 1fr; }.form-grid .wide { grid-column: auto; }
   .metric-grid { grid-template-columns: 1fr; }

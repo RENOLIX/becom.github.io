@@ -337,12 +337,6 @@ function AboutPage() {
   const showcaseProducts = products.slice(0, 3);
   return (
     <main>
-      <section className="editorial-hero shell">
-        <span className="eyebrow">Notre histoire</span>
-        <h1>Grandir, c'est devenir<br /><em>un peu plus soi.</em></h1>
-        <p>BECOM est née d'une idée simple : proposer aux familles des jouets que l'on aime regarder, offrir et transmettre.</p>
-      </section>
-
       <section className="about-orange-block">
         <div className="shell about-orange-inner">
           <div className="about-orange-copy">
@@ -360,6 +354,12 @@ function AboutPage() {
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="editorial-hero shell about-after-orange">
+        <span className="eyebrow">Notre histoire</span>
+        <h1>Grandir, c'est devenir<br /><em>un peu plus soi.</em></h1>
+        <p>BECOM est née d'une idée simple : proposer aux familles des jouets que l'on aime regarder, offrir et transmettre.</p>
       </section>
 
       <section className="about-grid shell">
