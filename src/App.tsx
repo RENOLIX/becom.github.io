@@ -6,7 +6,6 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
-  Blocks,
   Box,
   Check,
   CircleHelp,
@@ -46,6 +45,7 @@ import sprite from "./assets/product-sprite.jpg";
 import stickCenter from "./assets/stick-o-center.png";
 import stickLeft from "./assets/stick-o-left.png";
 import stickRight from "./assets/stick-o-right.png";
+import whyBecomChild from "./assets/why-becom-child.png";
 import { PressButton } from "./components/PressButton";
 import { type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
@@ -253,7 +253,6 @@ function MagnetBlock() {
 
 function HomePage() {
   const { products } = useStore();
-  const storyProduct = products[4] || products[0];
   return (
     <>
       <section className="hero">
@@ -282,7 +281,7 @@ function HomePage() {
       </section>
 
       <section className="section shell story-band">
-        {storyProduct && <div className="story-visual"><ProductArt product={storyProduct} /><span className="orbit one"><Blocks strokeWidth={1.8} /></span><span className="orbit two"><Sparkles strokeWidth={1.8} /></span></div>}
+        <div className="story-visual"><img src={whyBecomChild} alt="Enfant jouant avec un jouet éducatif BECOM" /></div>
         <div className="story-copy"><span className="eyebrow">Pourquoi BECOM ?</span><h2>Les enfants ne font pas que jouer.<br />Ils deviennent.</h2><p>Chaque jeu peut ouvrir une porte : vers l'autonomie, l'imagination, la confiance ou le plaisir d'apprendre. Nous sélectionnons moins, mais mieux.</p><ul><li><Check /> Des matières agréables et durables</li><li><Check /> Des jeux choisis pour leur vraie valeur</li><li><Check /> Une sélection joyeuse, jamais bruyante</li></ul><Link className="button dark" to="/a-propos">Découvrir notre histoire <ArrowRight /></Link></div>
       </section>
 
