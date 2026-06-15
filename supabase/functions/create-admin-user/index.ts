@@ -9,6 +9,15 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
+    const callerClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: request.headers.get("Authorization") ?? "" } } },
+    );
+    const { data: caller } = await callerClient.auth.getUser();
+    if (caller.user?.user_metadata?.role !== "admin") {
+      return new Response(JSON.stringify({ error: "Accès administrateur requis" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const { name, email, password, role } = await request.json();
     if (!name || !email || !password || !["admin", "employe"].includes(role)) {
       return new Response(JSON.stringify({ error: "Données utilisateur invalides" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });

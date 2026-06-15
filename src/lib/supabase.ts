@@ -7,10 +7,34 @@ const headers = {
   "Content-Type": "application/json",
 };
 
+const SESSION_KEY = "becom-supabase-session";
+type SupabaseSession = { access_token: string; refresh_token: string; user: { id: string; email?: string } };
+
+export function getAdminSession(): SupabaseSession | null {
+  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null") as SupabaseSession | null; } catch { return null; }
+}
+
+export async function signInAdmin(email: string, password: string) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ email, password }),
+  });
+  if (!response.ok) throw new Error("Email ou mot de passe incorrect");
+  const session = await response.json() as SupabaseSession;
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  return session;
+}
+
+export function signOutAdmin() {
+  localStorage.removeItem(SESSION_KEY);
+}
+
 export async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
+  const session = getAdminSession();
   const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
-    headers: { ...headers, Prefer: "return=representation", ...init.headers },
+    headers: { ...headers, Authorization: `Bearer ${session?.access_token || SUPABASE_KEY}`, Prefer: "return=representation", ...init.headers },
   });
 
   if (!response.ok) throw new Error(`Supabase ${response.status}`);
@@ -19,11 +43,26 @@ export async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
 }
 
 export async function createSupabaseAdminUser(input: { name: string; email: string; password: string; role: string }) {
+  const session = getAdminSession();
   const response = await fetch(`${SUPABASE_URL}/functions/v1/create-admin-user`, {
     method: "POST",
-    headers,
+    headers: { ...headers, Authorization: `Bearer ${session?.access_token || SUPABASE_KEY}` },
     body: JSON.stringify(input),
   });
   if (!response.ok) throw new Error(`Supabase function ${response.status}`);
   return response.json() as Promise<{ id: string }>;
+}
+
+export async function uploadProductImage(file: File) {
+  const session = getAdminSession();
+  if (!session) throw new Error("Connexion administrateur requise");
+  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `${crypto.randomUUID()}.${extension}`;
+  const response = await fetch(`${SUPABASE_URL}/storage/v1/object/product-images/${path}`, {
+    method: "POST",
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${session.access_token}`, "Content-Type": file.type || "image/jpeg", "x-upsert": "true" },
+    body: file,
+  });
+  if (!response.ok) throw new Error("Le téléversement de la photo a échoué");
+  return `${SUPABASE_URL}/storage/v1/object/public/product-images/${path}`;
 }

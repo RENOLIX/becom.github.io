@@ -40,6 +40,7 @@ import hero from "./assets/becom-hero.jpg";
 import sprite from "./assets/product-sprite.jpg";
 import { PressButton } from "./components/PressButton";
 import { ageGroups, type Product } from "./data";
+import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
 import { useStore, type AdminRole, type AdminUser } from "./store";
 
 const money = (value: number) => `${value.toLocaleString("fr-DZ")} DA`;
@@ -300,10 +301,24 @@ function CheckoutPage() {
 }
 
 function AdminPage() {
+  const [session, setSession] = useState(() => getAdminSession());
   const [section, setSection] = useState("dashboard");
   const { syncMode } = useStore();
+  if (!session) return <AdminLogin onSuccess={() => window.location.reload()} />;
   const titles: Record<string, string> = { dashboard: "Vue d'ensemble", products: "Catalogue produits", orders: "Commandes", team: "Utilisateurs et accès" };
-  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{[["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["team", Users, "Équipe"]].map(([id, Icon, label]) => <button className={section === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[section]}</h1><p className={`sync-status ${syncMode}`}>{syncMode === "supabase" ? "Synchronisé avec Supabase" : "Mode local, en attente des tables Supabase"}</p></div></header>{section === "dashboard" && <Dashboard />}{section === "products" && <AdminProducts />}{section === "orders" && <AdminOrders />}{section === "team" && <AdminUsers />}</section></main>;
+  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{[["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["team", Users, "Équipe"]].map(([id, Icon, label]) => <button className={section === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><button className="admin-logout" onClick={() => { signOutAdmin(); setSession(null); }}><X /> Déconnexion</button><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[section]}</h1><p className={`sync-status ${syncMode}`}>{syncMode === "supabase" ? "Synchronisé avec Supabase" : "Mode local, en attente des tables Supabase"}</p></div></header>{section === "dashboard" && <Dashboard />}{section === "products" && <AdminProducts />}{section === "orders" && <AdminOrders />}{section === "team" && <AdminUsers />}</section></main>;
+}
+
+function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault(); setLoading(true); setError("");
+    try { await signInAdmin(email, password); onSuccess(); } catch (reason) { setError(reason instanceof Error ? reason.message : "Connexion impossible"); } finally { setLoading(false); }
+  };
+  return <main className="admin-login"><form onSubmit={submit}><Logo /><span className="eyebrow">Espace sécurisé</span><h1>Administration BECOM</h1><p>Connectez-vous pour gérer les produits, les commandes et l'équipe.</p><label>Adresse email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Mot de passe<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error && <div className="admin-login-error">{error}</div>}<PressButton full size="lg" type="submit" disabled={loading} label={loading ? "Connexion..." : "Se connecter"} /><Link to="/">Retour à la boutique</Link></form></main>;
 }
 
 function Dashboard() {
@@ -317,12 +332,12 @@ function AdminProducts() {
   const filtered = products.filter((product) => product.name.toLowerCase().includes(query.toLowerCase()));
   const emptyProduct = (): Product => ({ id: "", name: "", category: "Éveil", age: "0-2 ans", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", sprite: 0, stock: 0, description: "", skills: [] });
   const close = () => setDraft(null);
-  const uploadImage = (event: ChangeEvent<HTMLInputElement>) => {
+  const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !draft) return;
-    const reader = new FileReader();
-    reader.onload = () => setDraft({ ...draft, imageUrl: String(reader.result) });
-    reader.readAsDataURL(file);
+    const preview = URL.createObjectURL(file);
+    setDraft({ ...draft, imageUrl: preview });
+    try { setDraft({ ...draft, imageUrl: await uploadProductImage(file) }); } catch { setDraft({ ...draft, imageUrl: preview }); }
     event.target.value = "";
   };
   const submit = async (event: FormEvent) => {
