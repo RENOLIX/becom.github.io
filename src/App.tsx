@@ -43,9 +43,9 @@ import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } fro
 import logo from "./assets/becom-logo.png";
 import hero from "./assets/becom-hero.jpg";
 import sprite from "./assets/product-sprite.jpg";
-import stickCenter from "./assets/stick-o-center.svg";
-import stickLeft from "./assets/stick-o-left.svg";
-import stickRight from "./assets/stick-o-right.svg";
+import stickCenter from "./assets/stick-o-center.png";
+import stickLeft from "./assets/stick-o-left.png";
+import stickRight from "./assets/stick-o-right.png";
 import { PressButton } from "./components/PressButton";
 import { type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
