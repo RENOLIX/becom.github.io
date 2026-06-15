@@ -52,6 +52,14 @@ import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "
 import { useStore, type AdminRole, type AdminUser } from "./store";
 
 const money = (value: number) => `${value.toLocaleString("fr-DZ")} DA`;
+const algeriaWilayas = [
+  "01 - Adrar", "02 - Chlef", "03 - Laghouat", "04 - Oum El Bouaghi", "05 - Batna", "06 - Béjaïa", "07 - Biskra", "08 - Béchar", "09 - Blida", "10 - Bouira",
+  "11 - Tamanrasset", "12 - Tébessa", "13 - Tlemcen", "14 - Tiaret", "15 - Tizi Ouzou", "16 - Alger", "17 - Djelfa", "18 - Jijel", "19 - Sétif", "20 - Saïda",
+  "21 - Skikda", "22 - Sidi Bel Abbès", "23 - Annaba", "24 - Guelma", "25 - Constantine", "26 - Médéa", "27 - Mostaganem", "28 - M'Sila", "29 - Mascara", "30 - Ouargla",
+  "31 - Oran", "32 - El Bayadh", "33 - Illizi", "34 - Bordj Bou Arréridj", "35 - Boumerdès", "36 - El Tarf", "37 - Tindouf", "38 - Tissemsilt", "39 - El Oued", "40 - Khenchela",
+  "41 - Souk Ahras", "42 - Tipaza", "43 - Mila", "44 - Aïn Defla", "45 - Naâma", "46 - Aïn Témouchent", "47 - Ghardaïa", "48 - Relizane", "49 - Timimoun", "50 - Bordj Badji Mokhtar",
+  "51 - Ouled Djellal", "52 - Béni Abbès", "53 - In Salah", "54 - In Guezzam", "55 - Touggourt", "56 - Djanet", "57 - El M'Ghair", "58 - El Meniaa",
+];
 
 type CartLine = { product: Product; quantity: number };
 type CartValue = {
@@ -383,8 +391,37 @@ function ContactPage() {
 function CheckoutPage() {
   const { lines, total } = useCart();
   const [done, setDone] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<"domicile" | "bureau">("domicile");
+  const shipping = deliveryMethod === "domicile" ? 500 : 350;
   if (done) return <main className="order-success shell"><div><PackageCheck /><span className="eyebrow">Commande confirmée</span><h1>Merci pour votre confiance.</h1><p>Votre commande BECOM est en préparation. Un message de confirmation vous sera envoyé.</p><Link className="button primary" to="/">Retour à l'accueil</Link></div></main>;
-  return <main className="checkout shell"><div className="checkout-form"><span className="eyebrow">Finaliser la commande</span><h1>Livraison</h1><div className="form-grid"><label>Prénom<input placeholder="Prénom" /></label><label>Nom<input placeholder="Nom" /></label><label className="wide">Téléphone<input placeholder="05 50 00 00 00" /></label><label className="wide">Adresse<input placeholder="Rue, quartier..." /></label><label>Wilaya<select><option>Alger</option><option>Oran</option><option>Blida</option><option>Constantine</option></select></label><label>Commune<input placeholder="Commune" /></label></div><div className="payment-card"><span><Truck /> Paiement à la livraison</span><Check /></div><PressButton disabled={!lines.length} full size="lg" onClick={() => setDone(true)}>Confirmer la commande <ArrowRight /></PressButton></div><aside className="order-summary"><h2>Votre commande</h2>{lines.map((line) => <div className="summary-line" key={line.product.id}><ProductArt product={line.product} /><span><strong>{line.product.name}</strong><small>Quantité : {line.quantity}</small></span><b>{money(line.product.price * line.quantity)}</b></div>)}<div className="summary-totals"><p><span>Sous-total</span><strong>{money(total)}</strong></p><p><span>Livraison</span><strong>500 DA</strong></p><p className="grand-total"><span>Total</span><strong>{money(total + 500)}</strong></p></div></aside></main>;
+  return (
+    <main className="checkout shell">
+      <form className="checkout-form" onSubmit={(event) => { event.preventDefault(); if (lines.length) setDone(true); }}>
+        <span className="eyebrow">Finaliser la commande</span>
+        <h1>Confirmation de commande</h1>
+        <div className="form-grid">
+          <label className="wide">Nom et prénom<input required placeholder="Nom et prénom" /></label>
+          <label className="wide">Numéro de téléphone<input required inputMode="numeric" maxLength={10} placeholder="05 50 00 00 00" /></label>
+          <label className="wide">Wilaya<select required defaultValue=""><option value="" disabled>Choisir la wilaya</option>{algeriaWilayas.map((wilaya) => <option key={wilaya}>{wilaya}</option>)}</select></label>
+          <label className="wide">Adresse précise<input required placeholder="Rue, quartier, bâtiment, étage..." /></label>
+          <label className="wide">Commune<input placeholder="Commune ou point de repère" /></label>
+        </div>
+        <div className="delivery-methods">
+          <p>Méthode de livraison</p>
+          <label><input type="radio" name="deliveryMethod" checked={deliveryMethod === "domicile"} onChange={() => setDeliveryMethod("domicile")} /> Livraison à domicile</label>
+          <label><input type="radio" name="deliveryMethod" checked={deliveryMethod === "bureau"} onChange={() => setDeliveryMethod("bureau")} /> Livraison au bureau</label>
+        </div>
+        <div className="payment-card"><span><Truck /> Paiement à la livraison</span><Check /></div>
+        <div className="checkout-total-card"><span>Total à payer</span><strong>{money(total + shipping)}</strong></div>
+        <PressButton disabled={!lines.length} full size="lg" type="submit">Confirmer la commande <ArrowRight /></PressButton>
+      </form>
+      <aside className="order-summary">
+        <h2>Votre commande</h2>
+        {lines.map((line) => <div className="summary-line" key={line.product.id}><ProductArt product={line.product} /><span><strong>{line.product.name}</strong><small>Quantité : {line.quantity}</small></span><b>{money(line.product.price * line.quantity)}</b></div>)}
+        <div className="summary-totals"><p><span>Sous-total</span><strong>{money(total)}</strong></p><p><span>Livraison</span><strong>{money(shipping)}</strong></p><p><span>Méthode</span><strong>{deliveryMethod === "domicile" ? "Domicile" : "Bureau"}</strong></p><p className="grand-total"><span>Total</span><strong>{money(total + shipping)}</strong></p></div>
+      </aside>
+    </main>
+  );
 }
 
 function AdminPage() {
