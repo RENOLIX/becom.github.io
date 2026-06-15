@@ -9,6 +9,7 @@ create table if not exists public.products (
   reviews integer not null default 0,
   badge text,
   color text not null default '#e8f1fb',
+  image_url text,
   sprite integer not null default 0,
   stock integer not null default 0,
   description text not null default '',

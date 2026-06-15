@@ -9,6 +9,7 @@ import {
   Filter,
   Gift,
   Heart,
+  ImagePlus,
   Instagram,
   LayoutDashboard,
   Mail,
@@ -32,7 +33,7 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
-import { createContext, useContext, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import logo from "./assets/becom-logo.png";
 import hero from "./assets/becom-hero.jpg";
@@ -99,7 +100,7 @@ function ProductArt({ product, className = "" }: { product: Product; className?:
   return (
     <div
       className={`product-art ${className}`}
-      style={{ backgroundImage: `url(${sprite})`, backgroundPosition: `${x}% ${y}%`, backgroundColor: product.color }}
+      style={{ backgroundImage: product.imageUrl ? `url(${product.imageUrl})` : `url(${sprite})`, backgroundPosition: product.imageUrl ? "center" : `${x}% ${y}%`, backgroundColor: product.color }}
       role="img"
       aria-label={product.name}
     />
@@ -315,15 +316,79 @@ function AdminProducts() {
   const [draft, setDraft] = useState<Product | null>(null);
   const filtered = products.filter((product) => product.name.toLowerCase().includes(query.toLowerCase()));
   const emptyProduct = (): Product => ({ id: "", name: "", category: "Éveil", age: "0-2 ans", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", sprite: 0, stock: 0, description: "", skills: [] });
+  const close = () => setDraft(null);
+  const uploadImage = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !draft) return;
+    const reader = new FileReader();
+    reader.onload = () => setDraft({ ...draft, imageUrl: String(reader.result) });
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!draft) return;
     const id = draft.id || draft.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     await saveProduct({ ...draft, id });
-    setDraft(null);
+    close();
   };
 
-  return <><section className="admin-table-card"><div className="admin-table-head"><div className="search-field"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher dans le catalogue" /></div><PressButton onClick={() => setDraft(emptyProduct())}><Plus /> Nouveau produit</PressButton></div><div className="admin-table">{filtered.map((product) => <div className="table-row" key={product.id}><ProductArt product={product} /><div><strong>{product.name}</strong><small>{product.category} · {product.age}</small></div><span>{money(product.price)}</span><span className={product.stock < 8 ? "stock-low" : "stock-ok"}>{product.stock} en stock</span><div className="table-actions"><button onClick={() => setDraft(product)} aria-label={`Modifier ${product.name}`}><Pencil /></button><button className="danger" onClick={() => deleteProduct(product.id)} aria-label={`Supprimer ${product.name}`}><Trash2 /></button></div></div>)}</div></section>{draft && <div className="admin-modal-backdrop"><form className="admin-modal" onSubmit={submit}><div className="admin-modal-head"><div><span className="eyebrow">Catalogue</span><h2>{draft.id ? "Modifier le produit" : "Ajouter un produit"}</h2></div><button type="button" onClick={() => setDraft(null)} aria-label="Fermer"><X /></button></div><div className="admin-form-grid"><label>Nom<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label><label>Catégorie<input required value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} /></label><label>Âge<select value={draft.age} onChange={(event) => setDraft({ ...draft, age: event.target.value })}>{ageGroups.slice(1).map((age) => <option key={age}>{age}</option>)}</select></label><label>Prix (DA)<input required min="0" type="number" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label><label>Ancien prix<input min="0" type="number" value={draft.oldPrice || ""} onChange={(event) => setDraft({ ...draft, oldPrice: event.target.value ? Number(event.target.value) : undefined })} /></label><label>Stock<input required min="0" type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label><label>Badge<input value={draft.badge || ""} onChange={(event) => setDraft({ ...draft, badge: event.target.value || undefined })} /></label><label>Visuel<select value={draft.sprite} onChange={(event) => setDraft({ ...draft, sprite: Number(event.target.value) })}>{Array.from({ length: 8 }).map((_, index) => <option value={index} key={index}>Image produit {index + 1}</option>)}</select></label><label className="wide">Description<textarea required rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label><label className="wide">Compétences, séparées par des virgules<input value={draft.skills.join(", ")} onChange={(event) => setDraft({ ...draft, skills: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label></div><div className="admin-modal-actions"><PressButton label="Annuler" type="button" variant="secondary" onClick={() => setDraft(null)} /><PressButton label="Enregistrer le produit" type="submit" /></div></form></div>}</>;
+  return (
+    <>
+      <section className="admin-table-card">
+        <div className="admin-table-head">
+          <div className="search-field"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher dans le catalogue" /></div>
+          <PressButton onClick={() => setDraft(emptyProduct())}><Plus /> Nouveau produit</PressButton>
+        </div>
+        <div className="admin-table">
+          {filtered.map((product) => (
+            <div className="table-row" key={product.id}>
+              <ProductArt product={product} />
+              <div><strong>{product.name}</strong><small>{product.category} · {product.age}</small></div>
+              <span>{money(product.price)}</span>
+              <span className={product.stock < 8 ? "stock-low" : "stock-ok"}>{product.stock} en stock</span>
+              <div className="table-actions">
+                <button onClick={() => setDraft(product)} aria-label={`Modifier ${product.name}`}><Pencil /></button>
+                <button className="danger" onClick={() => deleteProduct(product.id)} aria-label={`Supprimer ${product.name}`}><Trash2 /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+      {draft && (
+        <div className="admin-modal-backdrop">
+          <form className="admin-modal" onSubmit={submit}>
+            <div className="admin-modal-head">
+              <div><span className="eyebrow">Catalogue</span><h2>{draft.id ? "Modifier le produit" : "Ajouter un produit"}</h2></div>
+              <button type="button" onClick={close} aria-label="Fermer"><X /></button>
+            </div>
+            <div className="admin-product-media">
+              <ProductArt product={draft} />
+              <div>
+                <strong>Photo du produit</strong>
+                <p>Téléversez une photo depuis ordinateur ou téléphone. Elle remplacera le visuel modèle.</p>
+                <label className="upload-button"><ImagePlus /> Téléverser une photo<input accept="image/*" type="file" onChange={uploadImage} /></label>
+                {draft.imageUrl && <button type="button" className="remove-photo" onClick={() => setDraft({ ...draft, imageUrl: undefined })}>Retirer la photo</button>}
+              </div>
+            </div>
+            <div className="admin-form-grid">
+              <label>Nom<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+              <label>Catégorie<input required value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value })} /></label>
+              <label>Âge<select value={draft.age} onChange={(event) => setDraft({ ...draft, age: event.target.value })}>{ageGroups.slice(1).map((age) => <option key={age}>{age}</option>)}</select></label>
+              <label>Prix (DA)<input required min="0" type="number" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
+              <label>Ancien prix<input min="0" type="number" value={draft.oldPrice || ""} onChange={(event) => setDraft({ ...draft, oldPrice: event.target.value ? Number(event.target.value) : undefined })} /></label>
+              <label>Stock<input required min="0" type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
+              <label>Badge<input value={draft.badge || ""} onChange={(event) => setDraft({ ...draft, badge: event.target.value || undefined })} /></label>
+              <label>Visuel de secours<select value={draft.sprite} onChange={(event) => setDraft({ ...draft, sprite: Number(event.target.value) })}>{Array.from({ length: 8 }).map((_, index) => <option value={index} key={index}>Image produit {index + 1}</option>)}</select></label>
+              <label className="wide">Description<textarea required rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+              <label className="wide">Compétences, séparées par des virgules<input value={draft.skills.join(", ")} onChange={(event) => setDraft({ ...draft, skills: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label>
+            </div>
+            <div className="admin-modal-actions"><PressButton label="Annuler" type="button" variant="secondary" onClick={close} /><PressButton label="Enregistrer le produit" type="submit" /></div>
+          </form>
+        </div>
+      )}
+    </>
+  );
 }
 
 function AdminUsers() {

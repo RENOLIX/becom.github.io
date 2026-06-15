@@ -33,14 +33,14 @@ const toProductRow = (product: Product) => ({
   id: product.id, name: product.name, category: product.category, age: product.age,
   price: product.price, old_price: product.oldPrice ?? null, rating: product.rating,
   reviews: product.reviews, badge: product.badge ?? null, color: product.color,
-  sprite: product.sprite, stock: product.stock, description: product.description, skills: product.skills,
+  image_url: product.imageUrl ?? null, sprite: product.sprite, stock: product.stock, description: product.description, skills: product.skills,
 });
 
 const fromProductRow = (row: Record<string, unknown>): Product => ({
   id: String(row.id), name: String(row.name), category: String(row.category), age: String(row.age),
   price: Number(row.price), oldPrice: row.old_price == null ? undefined : Number(row.old_price),
   rating: Number(row.rating), reviews: Number(row.reviews), badge: row.badge ? String(row.badge) : undefined,
-  color: String(row.color), sprite: Number(row.sprite), stock: Number(row.stock),
+  color: String(row.color), imageUrl: row.image_url ? String(row.image_url) : undefined, sprite: Number(row.sprite), stock: Number(row.stock),
   description: String(row.description), skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
 });
 

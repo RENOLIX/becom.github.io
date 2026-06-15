@@ -9,6 +9,7 @@ export type Product = {
   reviews: number;
   badge?: string;
   color: string;
+  imageUrl?: string;
   sprite: number;
   stock: number;
   description: string;
