@@ -212,14 +212,23 @@ function SectionTitle({ kicker, title, copy }: { kicker: string; title: string; 
 
 function MagnetBlock() {
   const sectionRef = useRef<HTMLElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start end", "end center"],
   });
 
-  const leftX = useTransform(scrollYProgress, [0, 1], [-320, -96]);
-  const rightX = useTransform(scrollYProgress, [0, 1], [320, 96]);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 780px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  const leftX = useTransform(scrollYProgress, [0, 0.58, 1], isMobile ? [-210, -76, -76] : [-320, -96, -96]);
+  const rightX = useTransform(scrollYProgress, [0, 0.58, 1], isMobile ? [210, 76, 76] : [320, 96, 96]);
 
   return (
     <section ref={sectionRef} className="magnet-block">
