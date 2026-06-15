@@ -227,8 +227,8 @@ function MagnetBlock() {
     return () => media.removeEventListener("change", update);
   }, []);
 
-  const leftX = useTransform(scrollYProgress, [0, 0.58, 1], isMobile ? [-210, -76, -76] : [-320, -96, -96]);
-  const rightX = useTransform(scrollYProgress, [0, 0.58, 1], isMobile ? [210, 76, 76] : [320, 96, 96]);
+  const leftX = useTransform(scrollYProgress, [0, 1], isMobile ? [-320, -62] : [-320, -96]);
+  const rightX = useTransform(scrollYProgress, [0, 1], isMobile ? [320, 62] : [320, 96]);
 
   return (
     <section ref={sectionRef} className="magnet-block">
