@@ -334,7 +334,41 @@ function ProductPage() {
 function AboutPage() {
   const { products } = useStore();
   const featured = products[1] || products[0];
-  return <main><section className="editorial-hero shell"><span className="eyebrow">Notre histoire</span><h1>Grandir, c'est devenir<br /><em>un peu plus soi.</em></h1><p>BECOM est née d'une idée simple : proposer aux familles des jouets que l'on aime regarder, offrir et transmettre.</p></section><section className="about-grid shell">{featured && <div className="about-art"><ProductArt product={featured} /><span>Depuis<br /><strong>2026</strong></span></div>}<div><span className="eyebrow">Notre manifeste</span><h2>Moins de bruit.<br />Plus d'imagination.</h2><p>Nous croyons aux jeux ouverts, aux objets qui durent et aux moments où l'enfant oublie le temps. Notre sélection privilégie la qualité d'usage, la sécurité et une esthétique joyeuse qui trouve sa place dans la maison.</p><div className="values"><div><strong>01</strong><h3>Bien choisir</h3><p>Chaque produit est évalué pour son intérêt, sa finition et son âge réel d'utilisation.</p></div><div><strong>02</strong><h3>Faire durer</h3><p>Nous préférons les matières solides et les designs qui traversent les années.</p></div><div><strong>03</strong><h3>Rester proches</h3><p>Une équipe disponible pour conseiller, rassurer et trouver le cadeau juste.</p></div></div></div></section><Newsletter /></main>;
+  const showcaseProducts = products.slice(0, 3);
+  return (
+    <main>
+      <section className="editorial-hero shell">
+        <span className="eyebrow">Notre histoire</span>
+        <h1>Grandir, c'est devenir<br /><em>un peu plus soi.</em></h1>
+        <p>BECOM est née d'une idée simple : proposer aux familles des jouets que l'on aime regarder, offrir et transmettre.</p>
+      </section>
+
+      <section className="about-orange-block">
+        <div className="shell about-orange-inner">
+          <div className="about-orange-copy">
+            <span className="eyebrow">BECOM Store</span>
+            <h2>Jouets originaux<br />et innovants</h2>
+            <p>Chez BECOM, nous aimons les jouets et les enfants. Alors nous choisissons des pieces belles, solides et utiles, capables de nourrir l'imagination sans remplir la maison de bruit.</p>
+            <p>Notre mission est simple : aider les parents a trouver le bon jouet, au bon moment, avec une selection claire, joyeuse et vraiment adaptee aux familles.</p>
+          </div>
+          <div className="about-orange-visual">
+            {showcaseProducts.map((product, index) => (
+              <article className={`about-orange-card card-${index + 1}`} key={product.id}>
+                <ProductArt product={product} />
+                <span>{product.name}</span>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="about-grid shell">
+        {featured && <div className="about-art"><ProductArt product={featured} /><span>Depuis<br /><strong>2026</strong></span></div>}
+        <div><span className="eyebrow">Notre manifeste</span><h2>Moins de bruit.<br />Plus d'imagination.</h2><p>Nous croyons aux jeux ouverts, aux objets qui durent et aux moments où l'enfant oublie le temps. Notre sélection privilégie la qualité d'usage, la sécurité et une esthétique joyeuse qui trouve sa place dans la maison.</p><div className="values"><div><strong>01</strong><h3>Bien choisir</h3><p>Chaque produit est évalué pour son intérêt, sa finition et son âge réel d'utilisation.</p></div><div><strong>02</strong><h3>Faire durer</h3><p>Nous préférons les matières solides et les designs qui traversent les années.</p></div><div><strong>03</strong><h3>Rester proches</h3><p>Une équipe disponible pour conseiller, rassurer et trouver le cadeau juste.</p></div></div></div>
+      </section>
+      <Newsletter />
+    </main>
+  );
 }
 
 function ContactPage() {
