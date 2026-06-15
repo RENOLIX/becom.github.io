@@ -22,9 +22,7 @@ type StoreValue = {
   deleteUser: (id: string) => Promise<void>;
 };
 
-const defaultUsers: AdminUser[] = [
-  { id: "yacine-admin", name: "Yacine Admin", email: "admin@becom.store", role: "admin", active: true },
-];
+const defaultUsers: AdminUser[] = [];
 
 const StoreContext = createContext<StoreValue | null>(null);
 const readLocal = <T,>(key: string, fallback: T): T => {
@@ -48,7 +46,7 @@ const fromProductRow = (row: Record<string, unknown>): Product => ({
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>(() => readLocal("becom-products", initialProducts));
-  const [users, setUsers] = useState<AdminUser[]>(() => readLocal("becom-admin-users", defaultUsers));
+  const [users, setUsers] = useState<AdminUser[]>(() => readLocal("becom-admin-users-v2", defaultUsers));
   const [syncMode, setSyncMode] = useState<"local" | "supabase">("local");
 
   useEffect(() => {
@@ -63,7 +61,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => localStorage.setItem("becom-products", JSON.stringify(products)), [products]);
-  useEffect(() => localStorage.setItem("becom-admin-users", JSON.stringify(users)), [users]);
+  useEffect(() => localStorage.setItem("becom-admin-users-v2", JSON.stringify(users)), [users]);
 
   const saveProduct = async (product: Product) => {
     setProducts((current) => current.some((item) => item.id === product.id)

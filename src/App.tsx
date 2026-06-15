@@ -1,11 +1,9 @@
 import {
   ArrowLeft,
   ArrowRight,
-  Baby,
   Blocks,
   Box,
   Check,
-  ChevronRight,
   CircleHelp,
   Clock3,
   Filter,
@@ -18,7 +16,6 @@ import {
   Menu,
   Minus,
   PackageCheck,
-  Palette,
   Pencil,
   Phone,
   Plus,
@@ -30,7 +27,6 @@ import {
   Star,
   Store,
   Trash2,
-  Trophy,
   Truck,
   Users,
   UserPlus,
@@ -46,13 +42,6 @@ import { ageGroups, type Product } from "./data";
 import { useStore, type AdminRole, type AdminUser } from "./store";
 
 const money = (value: number) => `${value.toLocaleString("fr-DZ")} DA`;
-
-const ageCards = [
-  { age: "0-2 ans", label: "Premiers éveils", color: "#dff5e8", icon: Baby },
-  { age: "3-5 ans", label: "Imaginer & construire", color: "#fff0c4", icon: Blocks },
-  { age: "6-8 ans", label: "Créer & comprendre", color: "#e4ebff", icon: Palette },
-  { age: "9 ans +", label: "Défis & passions", color: "#ffe5e5", icon: Trophy },
-];
 
 type CartLine = { product: Product; quantity: number };
 type CartValue = {
@@ -223,13 +212,6 @@ function HomePage() {
         <div><CircleHelp /><span><strong>Conseils personnalisés</strong><small>On vous guide</small></span></div>
       </section>
 
-      <section className="section shell age-section">
-        <SectionTitle kicker="Le bon jouet, au bon moment" title="Choisir par âge" copy="Une sélection simple pour suivre leurs découvertes, leurs envies et leurs progrès." />
-        <div className="age-grid">
-          {ageCards.map(({ age, label, color, icon: AgeIcon }, index) => <Link to={`/boutique?age=${encodeURIComponent(age)}`} className="age-card" style={{ background: color }} key={age}><span className={`age-icon age-icon-${index + 1}`}><AgeIcon strokeWidth={1.7} /></span><div><strong>{age}</strong><small>{label}</small></div><ChevronRight /></Link>)}
-        </div>
-      </section>
-
       <section className="section products-section">
         <div className="shell">
           <div className="title-row"><SectionTitle kicker="Les chouchous du moment" title="Jouets qui font waouh" /><Link to="/boutique">Voir toute la boutique <ArrowRight /></Link></div>
@@ -256,12 +238,10 @@ function HomePage() {
 
 function ShopPage() {
   const { products } = useStore();
-  const params = new URLSearchParams(useLocation().search);
-  const [age, setAge] = useState(params.get("age") || "Tous les âges");
   const [category, setCategory] = useState("Toutes");
   const [query, setQuery] = useState("");
   const categories = ["Toutes", ...Array.from(new Set(products.map((product) => product.category)))];
-  const filtered = products.filter((product) => (age === "Tous les âges" || product.age === age) && (category === "Toutes" || product.category === category) && product.name.toLowerCase().includes(query.toLowerCase()));
+  const filtered = products.filter((product) => (category === "Toutes" || product.category === category) && product.name.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <main className="page-shell shell">
@@ -270,7 +250,6 @@ function ShopPage() {
         <div className="search-field"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un jouet..." /></div>
         <button className="filter-label"><Filter /> Filtrer</button>
       </div>
-      <div className="filter-block"><span>Par âge</span><div className="filter-chips">{ageGroups.map((item) => <button className={age === item ? "active" : ""} onClick={() => setAge(item)} key={item}>{item}</button>)}</div></div>
       <div className="filter-block"><span>Univers</span><div className="filter-chips compact">{categories.map((item) => <button className={category === item ? "active" : ""} onClick={() => setCategory(item)} key={item}>{item}</button>)}</div></div>
       {filtered.length > 0 ? <div className="product-grid shop-grid">{filtered.map((product) => <ProductCard key={product.id} product={product} />)}</div> : <div className="no-results"><Search /><h2>Aucun jouet ne correspond</h2><p>Essayez un autre âge ou un autre univers.</p></div>}
     </main>
@@ -322,12 +301,12 @@ function CheckoutPage() {
 function AdminPage() {
   const [section, setSection] = useState("dashboard");
   const { syncMode } = useStore();
-  const titles: Record<string, string> = { dashboard: "Bonjour, Yacine", products: "Catalogue produits", orders: "Commandes", team: "Utilisateurs et accès" };
-  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{[["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["team", Users, "Équipe"]].map(([id, Icon, label]) => <button className={section === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[section]}</h1><p className={`sync-status ${syncMode}`}>{syncMode === "supabase" ? "Synchronisé avec Supabase" : "Mode local, en attente des tables Supabase"}</p></div><div className="admin-user"><span>YA</span><div><strong>Yacine Admin</strong><small>Administrateur</small></div></div></header>{section === "dashboard" && <Dashboard />}{section === "products" && <AdminProducts />}{section === "orders" && <AdminOrders />}{section === "team" && <AdminUsers />}</section></main>;
+  const titles: Record<string, string> = { dashboard: "Vue d'ensemble", products: "Catalogue produits", orders: "Commandes", team: "Utilisateurs et accès" };
+  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{[["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["team", Users, "Équipe"]].map(([id, Icon, label]) => <button className={section === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[section]}</h1><p className={`sync-status ${syncMode}`}>{syncMode === "supabase" ? "Synchronisé avec Supabase" : "Mode local, en attente des tables Supabase"}</p></div></header>{section === "dashboard" && <Dashboard />}{section === "products" && <AdminProducts />}{section === "orders" && <AdminOrders />}{section === "team" && <AdminUsers />}</section></main>;
 }
 
 function Dashboard() {
-  return <><div className="metric-grid"><div><span>Chiffre d'affaires</span><strong>842 500 DA</strong><small className="up">+18,4% ce mois</small></div><div><span>Commandes</span><strong>128</strong><small className="up">+12 cette semaine</small></div><div><span>Panier moyen</span><strong>6 582 DA</strong><small>Stable</small></div><div><span>Stock faible</span><strong>3</strong><small className="warning">À vérifier</small></div></div><div className="admin-grid"><section className="chart-card"><div className="admin-card-title"><div><span className="eyebrow">Performance</span><h2>Ventes des 7 derniers jours</h2></div><button>Cette semaine</button></div><div className="fake-chart">{[42, 58, 47, 72, 64, 88, 78].map((height, index) => <div key={index}><span style={{ height: `${height}%` }} /><small>{["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"][index]}</small></div>)}</div></section><section className="activity-card"><div className="admin-card-title"><div><span className="eyebrow">En direct</span><h2>Dernières commandes</h2></div></div>{["#BC-1048", "#BC-1047", "#BC-1046", "#BC-1045"].map((order, index) => <div className="activity-line" key={order}><span className={["blue", "green", "yellow", "red"][index]}><ShoppingBag /></span><div><strong>{order}</strong><small>{["Amel B.", "Sofiane K.", "Lydia M.", "Nour H."][index]}</small></div><b>{["8 780 DA", "3 790 DA", "11 900 DA", "7 280 DA"][index]}</b></div>)}</section></div></>;
+  return <><div className="metric-grid"><div><span>Chiffre d'affaires</span><strong>0 DA</strong><small>Aucune vente</small></div><div><span>Commandes</span><strong>0</strong><small>Aucune commande</small></div><div><span>Panier moyen</span><strong>0 DA</strong><small>Pas encore calculé</small></div><div><span>Alertes</span><strong>0</strong><small>Tout est prêt</small></div></div><div className="admin-empty-state"><PackageCheck /><h2>Administration prête à démarrer</h2><p>Les nouvelles commandes et les données d'activité apparaîtront ici.</p></div></>;
 }
 
 function AdminProducts() {
@@ -364,7 +343,7 @@ function AdminUsers() {
 }
 
 function AdminOrders() {
-  return <section className="admin-table-card"><div className="admin-table-head"><h2>Commandes récentes</h2><button className="button soft">Exporter</button></div><div className="orders-table">{["#BC-1048", "#BC-1047", "#BC-1046", "#BC-1045", "#BC-1044"].map((order, index) => <div key={order}><strong>{order}</strong><span>{["Amel Benali", "Sofiane Kaci", "Lydia Mansouri", "Nour Hamidi", "Sami Cherif"][index]}</span><span>{["14 juin, 22:41", "14 juin, 21:18", "14 juin, 19:02", "14 juin, 17:36", "14 juin, 16:10"][index]}</span><b>{["8 780 DA", "3 790 DA", "11 900 DA", "7 280 DA", "4 490 DA"][index]}</b><em className={index < 2 ? "new" : index < 4 ? "progress" : "done"}>{index < 2 ? "Nouvelle" : index < 4 ? "En préparation" : "Expédiée"}</em></div>)}</div></section>;
+  return <section className="admin-table-card"><div className="admin-table-head"><h2>Commandes</h2></div><div className="admin-empty-state small"><ShoppingCart /><h2>Aucune commande</h2><p>Les commandes des clients apparaîtront automatiquement ici.</p></div></section>;
 }
 
 function Newsletter() {
@@ -374,7 +353,7 @@ function Newsletter() {
 }
 
 function Footer() {
-  return <footer className="footer"><div className="shell footer-grid"><div className="footer-brand"><Logo /><p>Des jouets qui font grandir l'imagination, la confiance et les beaux souvenirs.</p><div><a href="#instagram" aria-label="Instagram"><Instagram /></a><a href="mailto:bonjour@becom.store" aria-label="Email"><Mail /></a></div></div><div><strong>Boutique</strong><Link to="/boutique">Tous les jouets</Link><Link to="/boutique?age=0-2%20ans">0-2 ans</Link><Link to="/boutique?age=3-5%20ans">3-5 ans</Link><Link to="/boutique?age=6-8%20ans">6-8 ans</Link></div><div><strong>BECOM</strong><Link to="/a-propos">Notre histoire</Link><Link to="/contact">Contact</Link><Link to="/admin">Espace admin</Link><a href="#faq">Questions fréquentes</a></div><div><strong>Besoin d'aide ?</strong><a href="tel:+213550000000">+213 550 00 00 00</a><a href="mailto:bonjour@becom.store">bonjour@becom.store</a><span>Sam - Jeu · 9h - 18h</span></div></div><div className="shell footer-bottom"><span>© 2026 BECOM Store. Tous droits réservés.</span><span>Fait avec soin à Alger.</span></div></footer>;
+  return <footer className="footer"><div className="shell footer-grid"><div className="footer-brand"><Logo /><p>Des jouets qui font grandir l'imagination, la confiance et les beaux souvenirs.</p><div><a href="#instagram" aria-label="Instagram"><Instagram /></a><a href="mailto:bonjour@becom.store" aria-label="Email"><Mail /></a></div></div><div><strong>Boutique</strong><Link to="/boutique">Tous les jouets</Link></div><div><strong>BECOM</strong><Link to="/a-propos">Notre histoire</Link><Link to="/contact">Contact</Link><Link to="/admin">Espace admin</Link><a href="#faq">Questions fréquentes</a></div><div><strong>Besoin d'aide ?</strong><a href="tel:+213550000000">+213 550 00 00 00</a><a href="mailto:bonjour@becom.store">bonjour@becom.store</a><span>Sam - Jeu · 9h - 18h</span></div></div><div className="shell footer-bottom"><span>© 2026 BECOM Store. Tous droits réservés.</span><span>Fait avec soin à Alger.</span></div></footer>;
 }
 
 function NotFound() {
