@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 90" role="img" aria-label="Piece magnetique droite">
+  <defs>
+    <linearGradient id="rightBody" x1="30" y1="18" x2="180" y2="74" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#52dd8a"/>
+      <stop offset="1" stop-color="#18a95d"/>
+    </linearGradient>
+    <linearGradient id="rightCap" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#76a9db"/>
+      <stop offset="1" stop-color="#24598f"/>
+    </linearGradient>
+    <filter id="rightShadow" x="-20%" y="-30%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="11" stdDeviation="8" flood-color="#19324f" flood-opacity=".2"/>
+    </filter>
+  </defs>
+  <g filter="url(#rightShadow)">
+    <rect x="62" y="22" width="130" height="46" rx="23" fill="url(#rightBody)" transform="rotate(8 127 45)"/>
+    <circle cx="60" cy="45" r="28" fill="url(#rightCap)"/>
+    <circle cx="60" cy="45" r="15" fill="#eaf5ff" opacity=".72"/>
+    <circle cx="184" cy="39" r="15" fill="#ffffff" opacity=".18"/>
+  </g>
+</svg>

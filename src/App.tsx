@@ -43,6 +43,9 @@ import { Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } fro
 import logo from "./assets/becom-logo.png";
 import hero from "./assets/becom-hero.jpg";
 import sprite from "./assets/product-sprite.jpg";
+import stickCenter from "./assets/stick-o-center.svg";
+import stickLeft from "./assets/stick-o-left.svg";
+import stickRight from "./assets/stick-o-right.svg";
 import { PressButton } from "./components/PressButton";
 import { type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
@@ -226,13 +229,13 @@ function MagnetBlock() {
         </motion.div>
         <div className="magnet-assembly" aria-label="Assemblage magnetique Stick-O">
           <motion.div className="magnet-piece side" style={{ x: leftX }}>
-            <img src="https://hercules-cdn.com/file_9Le17ZrZK6OQ6jl415qbhewB" alt="Partie gauche Stick-O" draggable={false} />
+            <img src={stickLeft} alt="Partie gauche Stick-O" draggable={false} />
           </motion.div>
           <div className="magnet-piece center">
-            <img src="https://hercules-cdn.com/file_Bw4WLT4yILapjj9NJqOB5I47" alt="Boule centrale Stick-O" draggable={false} />
+            <img src={stickCenter} alt="Boule centrale Stick-O" draggable={false} />
           </div>
           <motion.div className="magnet-piece side" style={{ x: rightX }}>
-            <img src="https://hercules-cdn.com/file_WlbcqvIvtNtDidugmOFasGTa" alt="Partie droite Stick-O" draggable={false} />
+            <img src={stickRight} alt="Partie droite Stick-O" draggable={false} />
           </motion.div>
         </div>
       </div>
