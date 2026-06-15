@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { products as initialProducts, type Product } from "./data";
-import { createSupabaseAdminUser, supabaseRequest } from "./lib/supabase";
+import { createSupabaseAdminUser, getAdminSession, supabaseRequest } from "./lib/supabase";
 
 export type AdminRole = "admin" | "employe";
 export type AdminUser = {
@@ -72,14 +72,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [syncMode, setSyncMode] = useState<"local" | "supabase">("local");
 
   useEffect(() => {
-    Promise.all([
-      supabaseRequest<Record<string, unknown>[]>("products?select=*&order=name"),
-      supabaseRequest<AdminUser[]>("admin_users?select=*&order=name"),
-    ]).then(([remoteProducts, remoteUsers]) => {
-      if (remoteProducts.length) setProducts(remoteProducts.map(fromProductRow));
-      if (remoteUsers.length) setUsers(remoteUsers);
-      setSyncMode("supabase");
-    }).catch(() => setSyncMode("local"));
+    supabaseRequest<Record<string, unknown>[]>("products?select=*&order=name")
+      .then((remoteProducts) => {
+        if (remoteProducts.length) setProducts(remoteProducts.map(fromProductRow));
+        setSyncMode("supabase");
+      })
+      .catch(() => setSyncMode("local"));
+
+    if (getAdminSession()) {
+      supabaseRequest<AdminUser[]>("admin_users?select=*&order=name")
+        .then((remoteUsers) => {
+          if (remoteUsers.length) setUsers(remoteUsers);
+        })
+        .catch(() => undefined);
+    }
   }, []);
 
   useEffect(() => localStorage.setItem("becom-products", JSON.stringify(products)), [products]);
