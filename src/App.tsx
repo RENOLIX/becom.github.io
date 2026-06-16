@@ -49,7 +49,7 @@ import whyBecomChild from "./assets/why-becom-child.png";
 import { PressButton } from "./components/PressButton";
 import { type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
-import { useStore, type AdminRole, type AdminUser } from "./store";
+import { useStore, type AdminRole, type AdminUser, type CustomerOrder } from "./store";
 
 const money = (value: number) => `${value.toLocaleString("fr-DZ")} DA`;
 const algeriaWilayas = [
@@ -71,6 +71,7 @@ type CartValue = {
   add: (product: Product, quantity?: number) => void;
   change: (id: string, quantity: number) => void;
   remove: (id: string) => void;
+  clear: () => void;
 };
 
 const CartContext = createContext<CartValue | null>(null);
@@ -107,8 +108,9 @@ function CartProvider({ children }: { children: ReactNode }) {
     .map((line) => line.product.id === id ? { ...line, quantity } : line)
     .filter((line) => line.quantity > 0));
   const remove = (id: string) => setLines((current) => current.filter((line) => line.product.id !== id));
+  const clear = () => setLines([]);
 
-  return <CartContext.Provider value={{ lines, count, total, open, setOpen, add, change, remove }}>{children}</CartContext.Provider>;
+  return <CartContext.Provider value={{ lines, count, total, open, setOpen, add, change, remove, clear }}>{children}</CartContext.Provider>;
 }
 
 function ProductArt({ product, className = "" }: { product: Product; className?: string }) {
@@ -397,22 +399,56 @@ function ContactPage() {
 }
 
 function CheckoutPage() {
-  const { lines, total } = useCart();
+  const { lines, total, clear } = useCart();
+  const { createOrder } = useStore();
   const [done, setDone] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState<"domicile" | "bureau">("domicile");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const shipping = deliveryMethod === "domicile" ? 500 : 350;
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!lines.length) return;
+    const form = new FormData(event.currentTarget);
+    const order: CustomerOrder = {
+      id: crypto.randomUUID(),
+      customerName: String(form.get("customerName") || ""),
+      phone: String(form.get("phone") || ""),
+      wilaya: String(form.get("wilaya") || ""),
+      address: String(form.get("address") || ""),
+      commune: String(form.get("commune") || "") || undefined,
+      deliveryMethod,
+      subtotal: total,
+      shipping,
+      total: total + shipping,
+      status: "new",
+      items: lines.map((line) => ({ productId: line.product.id, name: line.product.name, quantity: line.quantity, price: line.product.price })),
+      createdAt: new Date().toISOString(),
+    };
+    setSaving(true);
+    setError("");
+    try {
+      await createOrder(order);
+      clear();
+      setDone(true);
+    } catch {
+      setError("La commande n'a pas pu être envoyée. Vérifiez que la table orders existe dans Supabase.");
+    } finally {
+      setSaving(false);
+    }
+  };
   if (done) return <main className="order-success shell"><div><PackageCheck /><span className="eyebrow">Commande confirmée</span><h1>Merci pour votre confiance.</h1><p>Votre commande BECOM est en préparation. Un message de confirmation vous sera envoyé.</p><Link className="button primary" to="/">Retour à l'accueil</Link></div></main>;
   return (
     <main className="checkout shell">
-      <form className="checkout-form" onSubmit={(event) => { event.preventDefault(); if (lines.length) setDone(true); }}>
+      <form className="checkout-form" onSubmit={submit}>
         <span className="eyebrow">Finaliser la commande</span>
         <h1>Confirmation de commande</h1>
         <div className="form-grid">
-          <label className="wide">Nom et prénom<input required placeholder="Nom et prénom" /></label>
-          <label className="wide">Numéro de téléphone<input required inputMode="numeric" maxLength={10} placeholder="05 50 00 00 00" /></label>
-          <label className="wide">Wilaya<select required defaultValue=""><option value="" disabled>Choisir la wilaya</option>{algeriaWilayas.map((wilaya) => <option key={wilaya}>{wilaya}</option>)}</select></label>
-          <label className="wide">Adresse précise<input required placeholder="Rue, quartier, bâtiment, étage..." /></label>
-          <label className="wide">Commune<input placeholder="Commune ou point de repère" /></label>
+          <label className="wide">Nom et prénom<input required name="customerName" placeholder="Nom et prénom" /></label>
+          <label className="wide">Numéro de téléphone<input required name="phone" inputMode="numeric" maxLength={10} placeholder="05 50 00 00 00" /></label>
+          <label className="wide">Wilaya<select required name="wilaya" defaultValue=""><option value="" disabled>Choisir la wilaya</option>{algeriaWilayas.map((wilaya) => <option key={wilaya}>{wilaya}</option>)}</select></label>
+          <label className="wide">Adresse précise<input required name="address" placeholder="Rue, quartier, bâtiment, étage..." /></label>
+          <label className="wide">Commune<input name="commune" placeholder="Commune ou point de repère" /></label>
         </div>
         <div className="delivery-methods">
           <p>Méthode de livraison</p>
@@ -421,7 +457,8 @@ function CheckoutPage() {
         </div>
         <div className="payment-card"><span><Truck /> Paiement à la livraison</span><Check /></div>
         <div className="checkout-total-card"><span>Total à payer</span><strong>{money(total + shipping)}</strong></div>
-        <PressButton disabled={!lines.length} full size="lg" type="submit">Confirmer la commande <ArrowRight /></PressButton>
+        {error && <div className="admin-login-error">{error}</div>}
+        <PressButton disabled={!lines.length || saving} full size="lg" type="submit">{saving ? "Envoi de la commande..." : "Confirmer la commande"} <ArrowRight /></PressButton>
       </form>
       <aside className="order-summary">
         <h2>Votre commande</h2>
@@ -572,7 +609,28 @@ function AdminUsers() {
 }
 
 function AdminOrders() {
-  return <section className="admin-table-card"><div className="admin-table-head"><h2>Commandes</h2></div><div className="admin-empty-state small"><ShoppingCart /><h2>Aucune commande</h2><p>Les commandes des clients apparaîtront automatiquement ici.</p></div></section>;
+  const { orders } = useStore();
+  return (
+    <section className="admin-table-card">
+      <div className="admin-table-head"><h2>{orders.length} commande{orders.length > 1 ? "s" : ""}</h2></div>
+      {orders.length ? (
+        <div className="orders-table">
+          {orders.map((order) => (
+            <div key={order.id}>
+              <strong>#{order.id.slice(0, 8)}</strong>
+              <span>{order.customerName}<small>{order.phone}</small></span>
+              <span>{order.wilaya}<small>{order.deliveryMethod === "domicile" ? "Domicile" : "Bureau"} · {order.commune || order.address}</small></span>
+              <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} produit{order.items.reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}<small>{order.items.map((item) => `${item.quantity}x ${item.name}`).join(", ")}</small></span>
+              <strong>{money(order.total)}</strong>
+              <em className={order.status}>{order.status === "new" ? "Nouvelle" : order.status === "progress" ? "En cours" : "Terminée"}</em>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="admin-empty-state small"><ShoppingCart /><h2>Aucune commande</h2><p>Les commandes des clients apparaîtront automatiquement ici après validation.</p></div>
+      )}
+    </section>
+  );
 }
 
 function Newsletter() {

@@ -26,8 +26,25 @@ create table if not exists public.admin_users (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.orders (
+  id text primary key,
+  customer_name text not null,
+  phone text not null,
+  wilaya text not null,
+  address text not null,
+  commune text,
+  delivery_method text not null check (delivery_method in ('domicile', 'bureau')),
+  subtotal integer not null check (subtotal >= 0),
+  shipping integer not null check (shipping >= 0),
+  total integer not null check (total >= 0),
+  status text not null default 'new' check (status in ('new', 'progress', 'done')),
+  items jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 alter table public.products enable row level security;
 alter table public.admin_users enable row level security;
+alter table public.orders enable row level security;
 
 drop policy if exists "public products read" on public.products;
 drop policy if exists "temporary products management" on public.products;
@@ -35,6 +52,9 @@ drop policy if exists "temporary admin users management" on public.admin_users;
 drop policy if exists "authenticated products management" on public.products;
 drop policy if exists "authenticated users read" on public.admin_users;
 drop policy if exists "admin users management" on public.admin_users;
+drop policy if exists "public orders insert" on public.orders;
+drop policy if exists "authenticated orders read" on public.orders;
+drop policy if exists "authenticated orders update" on public.orders;
 
 create policy "public products read" on public.products for select using (true);
 create policy "authenticated products management" on public.products for all to authenticated using (true) with check (true);
@@ -42,6 +62,9 @@ create policy "authenticated users read" on public.admin_users for select to aut
 create policy "admin users management" on public.admin_users for all to authenticated
   using ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin')
   with check ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
+create policy "public orders insert" on public.orders for insert to anon with check (true);
+create policy "authenticated orders read" on public.orders for select to authenticated using (true);
+create policy "authenticated orders update" on public.orders for update to authenticated using (true) with check (true);
 
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)
