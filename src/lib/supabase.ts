@@ -46,6 +46,18 @@ export async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
   return (text ? JSON.parse(text) : []) as T;
 }
 
+export async function supabaseAnonRequest<T>(path: string, init: RequestInit = {}) {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...init,
+    headers: { ...headers, Prefer: "return=representation", ...init.headers },
+  });
+
+  if (!response.ok) throw new Error(`Supabase ${response.status}`);
+  if (response.status === 204) return [] as T;
+  const text = await response.text();
+  return (text ? JSON.parse(text) : []) as T;
+}
+
 export async function createSupabaseAdminUser(input: { name: string; email: string; password: string; role: string }) {
   const session = getAdminSession();
   const response = await fetch(`${SUPABASE_URL}/functions/v1/create-admin-user`, {

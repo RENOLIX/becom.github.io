@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { products as initialProducts, type Product } from "./data";
-import { ADMIN_SESSION_EVENT, createSupabaseAdminUser, getAdminSession, supabaseRequest } from "./lib/supabase";
+import { ADMIN_SESSION_EVENT, createSupabaseAdminUser, getAdminSession, supabaseAnonRequest, supabaseRequest } from "./lib/supabase";
 import { defaultShippingRates, type ShippingRate } from "./shipping";
 
 export type AdminRole = "admin" | "employe";
@@ -214,7 +214,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const createOrder = async (order: CustomerOrder) => {
-    const [saved] = await supabaseRequest<Record<string, unknown>[]>("orders", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(toOrderRow(order)) });
+    const [saved] = await supabaseAnonRequest<Record<string, unknown>[]>("orders", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(toOrderRow(order)) });
     const nextOrder = saved ? fromOrderRow(saved) : order;
     setOrders((current) => [nextOrder, ...current]);
     setSyncMode("supabase");
