@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { products as initialProducts, type Product } from "./data";
-import { createSupabaseAdminUser, getAdminSession, supabaseRequest } from "./lib/supabase";
+import { ADMIN_SESSION_EVENT, createSupabaseAdminUser, getAdminSession, supabaseRequest } from "./lib/supabase";
 import { defaultShippingRates, type ShippingRate } from "./shipping";
 
 export type AdminRole = "admin" | "employe";
@@ -152,29 +152,45 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [syncMode, setSyncMode] = useState<"local" | "supabase">("local");
 
   useEffect(() => {
-    supabaseRequest<Record<string, unknown>[]>("products?select=*&order=name")
+    const syncPublicData = () => {
+      supabaseRequest<Record<string, unknown>[]>("products?select=*&order=name")
       .then((remoteProducts) => {
         if (remoteProducts.length) setProducts(remoteProducts.map(fromProductRow));
         setSyncMode("supabase");
       })
       .catch(() => setSyncMode("local"));
 
-    supabaseRequest<Record<string, unknown>[]>("shipping_rates?select=*&order=wilaya")
+      supabaseRequest<Record<string, unknown>[]>("shipping_rates?select=*&order=wilaya")
       .then((remoteRates) => {
         if (remoteRates.length) setShippingRates(mergeShippingRates(remoteRates.map(fromShippingRateRow)));
       })
       .catch(() => undefined);
+    };
 
-    if (getAdminSession()) {
+    const syncAdminData = () => {
+      if (!getAdminSession()) return;
       supabaseRequest<AdminUser[]>("admin_users?select=*&order=name")
         .then((remoteUsers) => {
           if (remoteUsers.length) setUsers(remoteUsers);
         })
         .catch(() => undefined);
       supabaseRequest<Record<string, unknown>[]>("orders?select=*&order=created_at.desc")
-        .then((remoteOrders) => setOrders(remoteOrders.map(fromOrderRow)))
+        .then((remoteOrders) => {
+          setOrders(remoteOrders.map(fromOrderRow));
+          setSyncMode("supabase");
+        })
         .catch(() => undefined);
-    }
+    };
+
+    syncPublicData();
+    syncAdminData();
+    window.addEventListener(ADMIN_SESSION_EVENT, syncAdminData);
+    const adminRefresh = window.setInterval(syncAdminData, 15000);
+
+    return () => {
+      window.removeEventListener(ADMIN_SESSION_EVENT, syncAdminData);
+      window.clearInterval(adminRefresh);
+    };
   }, []);
 
   useEffect(() => localStorage.setItem("becom-products", JSON.stringify(products)), [products]);

@@ -8,6 +8,7 @@ const headers = {
 };
 
 const SESSION_KEY = "becom-supabase-session";
+export const ADMIN_SESSION_EVENT = "becom-admin-session-change";
 type SupabaseSession = { access_token: string; refresh_token: string; user: { id: string; email?: string } };
 
 export function getAdminSession(): SupabaseSession | null {
@@ -23,11 +24,13 @@ export async function signInAdmin(email: string, password: string) {
   if (!response.ok) throw new Error("Email ou mot de passe incorrect");
   const session = await response.json() as SupabaseSession;
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  window.dispatchEvent(new Event(ADMIN_SESSION_EVENT));
   return session;
 }
 
 export function signOutAdmin() {
   localStorage.removeItem(SESSION_KEY);
+  window.dispatchEvent(new Event(ADMIN_SESSION_EVENT));
 }
 
 export async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
