@@ -49,17 +49,12 @@ import whyBecomChild from "./assets/why-becom-child.png";
 import { PressButton } from "./components/PressButton";
 import { type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
+import { algeriaWilayas, type ShippingRate } from "./shipping";
 import { useStore, type AdminRole, type AdminUser, type CustomerOrder } from "./store";
 
 const money = (value: number) => `${value.toLocaleString("fr-DZ")} DA`;
-const algeriaWilayas = [
-  "01 - Adrar", "02 - Chlef", "03 - Laghouat", "04 - Oum El Bouaghi", "05 - Batna", "06 - Béjaïa", "07 - Biskra", "08 - Béchar", "09 - Blida", "10 - Bouira",
-  "11 - Tamanrasset", "12 - Tébessa", "13 - Tlemcen", "14 - Tiaret", "15 - Tizi Ouzou", "16 - Alger", "17 - Djelfa", "18 - Jijel", "19 - Sétif", "20 - Saïda",
-  "21 - Skikda", "22 - Sidi Bel Abbès", "23 - Annaba", "24 - Guelma", "25 - Constantine", "26 - Médéa", "27 - Mostaganem", "28 - M'Sila", "29 - Mascara", "30 - Ouargla",
-  "31 - Oran", "32 - El Bayadh", "33 - Illizi", "34 - Bordj Bou Arréridj", "35 - Boumerdès", "36 - El Tarf", "37 - Tindouf", "38 - Tissemsilt", "39 - El Oued", "40 - Khenchela",
-  "41 - Souk Ahras", "42 - Tipaza", "43 - Mila", "44 - Aïn Defla", "45 - Naâma", "46 - Aïn Témouchent", "47 - Ghardaïa", "48 - Relizane", "49 - Timimoun", "50 - Bordj Badji Mokhtar",
-  "51 - Ouled Djellal", "52 - Béni Abbès", "53 - In Salah", "54 - In Guezzam", "55 - Touggourt", "56 - Djanet", "57 - El M'Ghair", "58 - El Meniaa",
-];
+const sitePhone = "0558413077";
+const siteEmail = "becom.storedz@gmail.com";
 
 type CartLine = { product: Product; quantity: number };
 type CartValue = {
@@ -401,17 +396,19 @@ function AboutPage() {
 function ContactPage() {
   const [sent, setSent] = useState(false);
   const submit = (event: FormEvent) => { event.preventDefault(); setSent(true); };
-  return <main className="contact-page shell"><div className="contact-intro"><span className="eyebrow">On est là pour vous</span><h1>Une question ?<br /><em>Parlons jouets.</em></h1><p>Besoin d'un conseil selon l'âge, d'une information sur une commande ou d'une idée cadeau ? Écrivez-nous.</p><div className="contact-cards"><a href="tel:+213550000000"><Phone /><span><strong>Appelez-nous</strong><small>+213 550 00 00 00</small></span></a><a href="mailto:bonjour@becom.store"><Mail /><span><strong>Écrivez-nous</strong><small>bonjour@becom.store</small></span></a><div><Clock3 /><span><strong>Horaires</strong><small>Sam - Jeu, 9h à 18h</small></span></div><div><MapPin /><span><strong>Nous trouver</strong><small>Alger, Algérie</small></span></div></div></div><form className="contact-form" onSubmit={submit}>{sent ? <div className="success-message"><Check /><h2>Message bien reçu</h2><p>Notre équipe vous répondra très vite.</p><PressButton label="Envoyer un autre message" type="button" variant="secondary" onClick={() => setSent(false)} /></div> : <><div className="form-title"><span>Bonjour !</span><h2>Comment pouvons-nous aider ?</h2></div><label>Votre nom<input required placeholder="Nom et prénom" /></label><label>Votre email<input required type="email" placeholder="vous@email.com" /></label><label>Sujet<select defaultValue="Conseil produit"><option>Conseil produit</option><option>Suivi de commande</option><option>Retour ou échange</option><option>Autre demande</option></select></label><label>Votre message<textarea required rows={5} placeholder="Dites-nous tout..." /></label><PressButton label="Envoyer" type="submit" size="lg" full /></>}</form></main>;
+  return <main className="contact-page shell"><div className="contact-intro"><span className="eyebrow">On est là pour vous</span><h1>Une question ?<br /><em>Parlons jouets.</em></h1><p>Besoin d'un conseil selon l'âge, d'une information sur une commande ou d'une idée cadeau ? Écrivez-nous.</p><div className="contact-cards"><a href={`tel:${sitePhone}`}><Phone /><span><strong>Appelez-nous</strong><small>{sitePhone}</small></span></a><a href={`mailto:${siteEmail}`}><Mail /><span><strong>Écrivez-nous</strong><small>{siteEmail}</small></span></a><div><Clock3 /><span><strong>Horaires</strong><small>Sam - Jeu, 9h à 18h</small></span></div><div><MapPin /><span><strong>Nous trouver</strong><small>Alger, Algérie</small></span></div></div></div><form className="contact-form" onSubmit={submit}>{sent ? <div className="success-message"><Check /><h2>Message bien reçu</h2><p>Notre équipe vous répondra très vite.</p><PressButton label="Envoyer un autre message" type="button" variant="secondary" onClick={() => setSent(false)} /></div> : <><div className="form-title"><span>Bonjour !</span><h2>Comment pouvons-nous aider ?</h2></div><label>Votre nom<input required placeholder="Nom et prénom" /></label><label>Votre email<input required type="email" placeholder="vous@email.com" /></label><label>Sujet<select defaultValue="Conseil produit"><option>Conseil produit</option><option>Suivi de commande</option><option>Retour ou échange</option><option>Autre demande</option></select></label><label>Votre message<textarea required rows={5} placeholder="Dites-nous tout..." /></label><PressButton label="Envoyer" type="submit" size="lg" full /></>}</form></main>;
 }
 
 function CheckoutPage() {
   const { lines, total, clear } = useCart();
-  const { createOrder } = useStore();
+  const { createOrder, shippingRates } = useStore();
   const [done, setDone] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState<"domicile" | "bureau">("domicile");
+  const [selectedWilaya, setSelectedWilaya] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const shipping = deliveryMethod === "domicile" ? 500 : 350;
+  const selectedRate = shippingRates.find((rate) => rate.wilaya === selectedWilaya);
+  const shipping = selectedRate ? selectedRate[deliveryMethod] : 0;
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!lines.length) return;
@@ -452,14 +449,14 @@ function CheckoutPage() {
         <div className="form-grid">
           <label className="wide">Nom et prénom<input required name="customerName" placeholder="Nom et prénom" /></label>
           <label className="wide">Numéro de téléphone<input required name="phone" inputMode="numeric" maxLength={10} placeholder="05 50 00 00 00" /></label>
-          <label className="wide">Wilaya<select required name="wilaya" defaultValue=""><option value="" disabled>Choisir la wilaya</option>{algeriaWilayas.map((wilaya) => <option key={wilaya}>{wilaya}</option>)}</select></label>
+          <label className="wide">Wilaya<select required name="wilaya" value={selectedWilaya} onChange={(event) => setSelectedWilaya(event.target.value)}><option value="" disabled>Choisir la wilaya</option>{algeriaWilayas.map((wilaya) => <option key={wilaya}>{wilaya}</option>)}</select></label>
           <label className="wide">Adresse précise<input required name="address" placeholder="Rue, quartier, bâtiment, étage..." /></label>
           <label className="wide">Commune<input name="commune" placeholder="Commune ou point de repère" /></label>
         </div>
         <div className="delivery-methods">
           <p>Méthode de livraison</p>
-          <label><input type="radio" name="deliveryMethod" checked={deliveryMethod === "domicile"} onChange={() => setDeliveryMethod("domicile")} /> Livraison à domicile</label>
-          <label><input type="radio" name="deliveryMethod" checked={deliveryMethod === "bureau"} onChange={() => setDeliveryMethod("bureau")} /> Livraison au bureau</label>
+          <label><input type="radio" name="deliveryMethod" checked={deliveryMethod === "domicile"} onChange={() => setDeliveryMethod("domicile")} /> Livraison à domicile {selectedRate && <strong>{money(selectedRate.domicile)}</strong>}</label>
+          <label><input type="radio" name="deliveryMethod" checked={deliveryMethod === "bureau"} onChange={() => setDeliveryMethod("bureau")} /> Livraison au bureau {selectedRate && <strong>{money(selectedRate.bureau)}</strong>}</label>
         </div>
         <div className="payment-card"><span><Truck /> Paiement à la livraison</span><Check /></div>
         <div className="checkout-total-card"><span>Total à payer</span><strong>{money(total + shipping)}</strong></div>
@@ -480,8 +477,8 @@ function AdminPage() {
   const [section, setSection] = useState("dashboard");
   const { syncMode } = useStore();
   if (!session) return <AdminLogin onSuccess={() => window.location.reload()} />;
-  const titles: Record<string, string> = { dashboard: "Vue d'ensemble", products: "Catalogue produits", orders: "Commandes", team: "Utilisateurs et accès" };
-  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{[["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["team", Users, "Équipe"]].map(([id, Icon, label]) => <button className={section === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><button className="admin-logout" onClick={() => { signOutAdmin(); setSession(null); }}><X /> Déconnexion</button><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[section]}</h1><p className={`sync-status ${syncMode}`}>{syncMode === "supabase" ? "actif" : "Mode local"}</p></div></header>{section === "dashboard" && <Dashboard />}{section === "products" && <AdminProducts />}{section === "orders" && <AdminOrders />}{section === "team" && <AdminUsers />}</section></main>;
+  const titles: Record<string, string> = { dashboard: "Vue d'ensemble", products: "Catalogue produits", orders: "Commandes", shipping: "Prix de livraison", team: "Utilisateurs et accès" };
+  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{[["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["shipping", Truck, "Livraison"], ["team", Users, "Équipe"]].map(([id, Icon, label]) => <button className={section === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><button className="admin-logout" onClick={() => { signOutAdmin(); setSession(null); }}><X /> Déconnexion</button><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[section]}</h1><p className={`sync-status ${syncMode}`}>{syncMode === "supabase" ? "actif" : "Mode local"}</p></div></header>{section === "dashboard" && <Dashboard />}{section === "products" && <AdminProducts />}{section === "orders" && <AdminOrders />}{section === "shipping" && <AdminShipping />}{section === "team" && <AdminUsers />}</section></main>;
 }
 
 function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
@@ -639,6 +636,41 @@ function AdminOrders() {
   );
 }
 
+function AdminShipping() {
+  const { shippingRates, saveShippingRates } = useStore();
+  const [draft, setDraft] = useState<ShippingRate[]>(shippingRates);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => setDraft(shippingRates), [shippingRates]);
+  const updateRate = (wilaya: string, field: "domicile" | "bureau", value: number) => {
+    setDraft((current) => current.map((rate) => rate.wilaya === wilaya ? { ...rate, [field]: Math.max(0, value) } : rate));
+    setSaved(false);
+  };
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    await saveShippingRates(draft);
+    setSaved(true);
+  };
+  return (
+    <form className="admin-table-card" onSubmit={submit}>
+      <div className="admin-table-head">
+        <div><span className="eyebrow">Tarifs par wilaya</span><h2>Domicile et bureau</h2></div>
+        <PressButton type="submit"><Check /> Enregistrer</PressButton>
+      </div>
+      {saved && <div className="admin-save-note">Les prix de livraison sont enregistrés et utilisés dans le formulaire commande.</div>}
+      <div className="shipping-table">
+        <div className="shipping-head"><span>Wilaya</span><span>Domicile</span><span>Bureau</span></div>
+        {draft.map((rate) => (
+          <div className="shipping-row" key={rate.wilaya}>
+            <strong>{rate.wilaya}</strong>
+            <label><input min="0" type="number" value={rate.domicile} onChange={(event) => updateRate(rate.wilaya, "domicile", Number(event.target.value))} /> DA</label>
+            <label><input min="0" type="number" value={rate.bureau} onChange={(event) => updateRate(rate.wilaya, "bureau", Number(event.target.value))} /> DA</label>
+          </div>
+        ))}
+      </div>
+    </form>
+  );
+}
+
 function Newsletter() {
   const [email, setEmail] = useState("");
   const [joined, setJoined] = useState(false);
@@ -646,7 +678,7 @@ function Newsletter() {
 }
 
 function Footer() {
-  return <footer className="footer"><div className="shell footer-grid"><div className="footer-brand"><Logo /><p>Des jouets qui font grandir l'imagination, la confiance et les beaux souvenirs.</p><div><a href="#instagram" aria-label="Instagram"><Instagram /></a><a href="mailto:bonjour@becom.store" aria-label="Email"><Mail /></a></div></div><div><strong>Boutique</strong><Link to="/boutique">Tous les jouets</Link></div><div><strong>BECOM</strong><Link to="/a-propos">Notre histoire</Link><Link to="/contact">Contact</Link><Link to="/admin">Espace admin</Link><a href="#faq">Questions fréquentes</a></div><div><strong>Besoin d'aide ?</strong><a href="tel:+213550000000">+213 550 00 00 00</a><a href="mailto:bonjour@becom.store">bonjour@becom.store</a><span>Sam - Jeu · 9h - 18h</span></div></div><div className="shell footer-bottom"><span>© 2026 BECOM Store. Tous droits réservés.</span><span>Fait avec soin à Alger.</span></div></footer>;
+  return <footer className="footer"><div className="shell footer-grid"><div className="footer-brand"><Logo /><p>Des jouets qui font grandir l'imagination, la confiance et les beaux souvenirs.</p><div><a href="#instagram" aria-label="Instagram"><Instagram /></a><a href={`mailto:${siteEmail}`} aria-label="Email"><Mail /></a></div></div><div><strong>Boutique</strong><Link to="/boutique">Tous les jouets</Link></div><div><strong>BECOM</strong><Link to="/a-propos">Notre histoire</Link><Link to="/contact">Contact</Link><Link to="/admin">Espace admin</Link><a href="#faq">Questions fréquentes</a></div><div><strong>Besoin d'aide ?</strong><a href={`tel:${sitePhone}`}>{sitePhone}</a><a href={`mailto:${siteEmail}`}>{siteEmail}</a><span>Sam - Jeu · 9h - 18h</span></div></div><div className="shell footer-bottom"><span>© 2026 BECOM Store. Tous droits réservés.</span><span>Fait avec soin à Alger.</span></div></footer>;
 }
 
 function NotFound() {

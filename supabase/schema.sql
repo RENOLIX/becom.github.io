@@ -42,9 +42,17 @@ create table if not exists public.orders (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.shipping_rates (
+  wilaya text primary key,
+  domicile_price integer not null default 500 check (domicile_price >= 0),
+  bureau_price integer not null default 350 check (bureau_price >= 0),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.products enable row level security;
 alter table public.admin_users enable row level security;
 alter table public.orders enable row level security;
+alter table public.shipping_rates enable row level security;
 
 drop policy if exists "public products read" on public.products;
 drop policy if exists "temporary products management" on public.products;
@@ -55,6 +63,8 @@ drop policy if exists "admin users management" on public.admin_users;
 drop policy if exists "public orders insert" on public.orders;
 drop policy if exists "authenticated orders read" on public.orders;
 drop policy if exists "authenticated orders update" on public.orders;
+drop policy if exists "public shipping rates read" on public.shipping_rates;
+drop policy if exists "authenticated shipping rates management" on public.shipping_rates;
 
 create policy "public products read" on public.products for select using (true);
 create policy "authenticated products management" on public.products for all to authenticated using (true) with check (true);
@@ -65,6 +75,8 @@ create policy "admin users management" on public.admin_users for all to authenti
 create policy "public orders insert" on public.orders for insert to anon with check (true);
 create policy "authenticated orders read" on public.orders for select to authenticated using (true);
 create policy "authenticated orders update" on public.orders for update to authenticated using (true) with check (true);
+create policy "public shipping rates read" on public.shipping_rates for select using (true);
+create policy "authenticated shipping rates management" on public.shipping_rates for all to authenticated using (true) with check (true);
 
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)
