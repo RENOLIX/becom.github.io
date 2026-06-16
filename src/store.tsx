@@ -11,7 +11,7 @@ export type AdminUser = {
   role: AdminRole;
   active: boolean;
 };
-export type OrderStatus = "new" | "progress" | "done";
+export type OrderStatus = "new" | "progress" | "done" | "return" | "cancelled";
 export type CustomerOrderItem = {
   productId: string;
   name: string;
@@ -74,20 +74,20 @@ const parseImageUrls = (value: unknown) => {
 };
 
 const toProductRow = (product: Product) => ({
-  id: product.id, name: product.name, category: product.category, age: product.age,
+  id: product.id, name: product.name, name_ar: product.nameAr || null, category: product.category, age: product.age,
   price: product.price, old_price: product.oldPrice ?? null, rating: product.rating,
   reviews: product.reviews, badge: product.badge ?? null, color: product.color,
-  image_url: normalizeImageUrl(product), sprite: product.sprite, stock: product.stock, description: product.description, skills: product.skills,
+  image_url: normalizeImageUrl(product), sprite: product.sprite, stock: product.stock, description: product.description, description_ar: product.descriptionAr || null, skills: product.skills,
 });
 
 const fromProductRow = (row: Record<string, unknown>): Product => {
   const images = parseImageUrls(row.image_url);
   return {
-    id: String(row.id), name: String(row.name), category: String(row.category), age: String(row.age),
+    id: String(row.id), name: String(row.name), nameAr: row.name_ar ? String(row.name_ar) : undefined, category: String(row.category), age: String(row.age),
     price: Number(row.price), oldPrice: row.old_price == null ? undefined : Number(row.old_price),
     rating: Number(row.rating), reviews: Number(row.reviews), badge: row.badge ? String(row.badge) : undefined,
     color: String(row.color), ...images, sprite: Number(row.sprite), stock: Number(row.stock),
-    description: String(row.description), skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
+    description: String(row.description), descriptionAr: row.description_ar ? String(row.description_ar) : undefined, skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
   };
 };
 
@@ -117,7 +117,7 @@ const fromOrderRow = (row: Record<string, unknown>): CustomerOrder => ({
   subtotal: Number(row.subtotal),
   shipping: Number(row.shipping),
   total: Number(row.total),
-  status: (row.status === "progress" || row.status === "done" ? row.status : "new") as OrderStatus,
+  status: (row.status === "progress" || row.status === "done" || row.status === "return" || row.status === "cancelled" ? row.status : "new") as OrderStatus,
   items: Array.isArray(row.items) ? row.items.map((item) => {
     const value = item as Record<string, unknown>;
     return { productId: String(value.productId), name: String(value.name), quantity: Number(value.quantity), price: Number(value.price) };
@@ -230,9 +230,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const updateOrderStatus = async (id: string, status: OrderStatus) => {
-    await supabaseRequest(`orders?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ status }) });
     setOrders((current) => current.map((order) => order.id === id ? { ...order, status } : order));
-    setSyncMode("supabase");
+    try {
+      await supabaseRequest(`orders?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ status }) });
+      setSyncMode("supabase");
+    } catch (error) {
+      console.error("Supabase order status update failed", error);
+      setSyncMode("error");
+      throw error;
+    }
   };
 
   const saveShippingRates = async (rates: ShippingRate[]) => {

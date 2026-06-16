@@ -1,6 +1,7 @@
 export type Product = {
   id: string;
   name: string;
+  nameAr?: string;
   category: string;
   age: string;
   price: number;
@@ -14,6 +15,7 @@ export type Product = {
   sprite: number;
   stock: number;
   description: string;
+  descriptionAr?: string;
   skills: string[];
 };
 

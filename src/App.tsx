@@ -50,11 +50,14 @@ import { PressButton } from "./components/PressButton";
 import { type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
 import { algeriaWilayas, type ShippingRate } from "./shipping";
+import { LanguagePicker, LanguageProvider, useLanguage } from "./language";
 import { useStore, type AdminRole, type AdminUser, type CustomerOrder, type OrderStatus } from "./store";
 
 const money = (value: number) => `${value.toLocaleString("fr-DZ")} DA`;
 const sitePhone = "0558413077";
 const siteEmail = "becom.storedz@gmail.com";
+const productName = (product: Product, isArabic: boolean) => isArabic && product.nameAr ? product.nameAr : product.name;
+const productDescription = (product: Product, isArabic: boolean) => isArabic && product.descriptionAr ? product.descriptionAr : product.description;
 
 type CartLine = { product: Product; quantity: number };
 type CartValue = {
@@ -109,6 +112,7 @@ function CartProvider({ children }: { children: ReactNode }) {
 }
 
 function ProductArt({ product, className = "", imageUrl }: { product: Product; className?: string; imageUrl?: string }) {
+  const { isArabic } = useLanguage();
   const x = [0, 33.333, 66.667, 100][product.sprite % 4];
   const y = product.sprite < 4 ? 0 : 100;
   const customImage = imageUrl || product.imageUrls?.[0] || product.imageUrl;
@@ -117,7 +121,7 @@ function ProductArt({ product, className = "", imageUrl }: { product: Product; c
       className={`product-art ${className}`}
       style={{ backgroundImage: customImage ? `url(${customImage})` : `url(${sprite})`, backgroundPosition: customImage ? "center" : `${x}% ${y}%`, backgroundSize: customImage ? "cover" : undefined, backgroundColor: product.color }}
       role="img"
-      aria-label={product.name}
+      aria-label={productName(product, isArabic)}
     />
   );
 }
@@ -145,6 +149,7 @@ function Header() {
         </nav>
         <div className="header-actions">
           <Link to="/boutique" className="icon-button hide-mobile" aria-label="Rechercher"><Search /></Link>
+          <LanguagePicker />
           <button className="cart-button" onClick={() => setOpen(true)} aria-label={`Panier, ${count} produits`}>
             <ShoppingCart />
             <span>{count}</span>
@@ -157,6 +162,7 @@ function Header() {
 
 function CartDrawer() {
   const { lines, total, open, setOpen, change, remove } = useCart();
+  const { isArabic } = useLanguage();
   return (
     <>
       <button className={`drawer-backdrop ${open ? "visible" : ""}`} onClick={() => setOpen(false)} aria-label="Fermer le panier" />
@@ -171,7 +177,7 @@ function CartDrawer() {
           ) : lines.map((line) => (
             <article className="cart-line" key={line.product.id}>
               <ProductArt product={line.product} />
-              <div><Link to={`/produit/${line.product.id}`} onClick={() => setOpen(false)}>{line.product.name}</Link><small>{line.product.age}</small><strong>{money(line.product.price)}</strong>
+              <div><Link to={`/produit/${line.product.id}`} onClick={() => setOpen(false)}>{productName(line.product, isArabic)}</Link><small>{line.product.age}</small><strong>{money(line.product.price)}</strong>
                 <div className="quantity-mini"><button onClick={() => change(line.product.id, line.quantity - 1)}><Minus /></button><span>{line.quantity}</span><button onClick={() => change(line.product.id, line.quantity + 1)}><Plus /></button></div>
               </div>
               <button className="remove-line" onClick={() => remove(line.product.id)} aria-label="Supprimer"><Trash2 /></button>
@@ -186,6 +192,7 @@ function CartDrawer() {
 
 function ProductCard({ product }: { product: Product }) {
   const { add } = useCart();
+  const { isArabic } = useLanguage();
   return (
     <article className="product-card">
       <Link to={`/produit/${product.id}`} className="product-visual">
@@ -195,7 +202,7 @@ function ProductCard({ product }: { product: Product }) {
       </Link>
       <div className="product-copy">
         <div className="product-meta"><span>{product.category}</span><span><Star fill="currentColor" /> {product.rating}</span></div>
-        <Link to={`/produit/${product.id}`}><h3>{product.name}</h3></Link>
+        <Link to={`/produit/${product.id}`}><h3>{productName(product, isArabic)}</h3></Link>
         <p>{product.age}</p>
         <div className="product-bottom"><div><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><button className="add-button" onClick={() => add(product)} aria-label="Ajouter au panier"><span className="cart-add-icon"><ShoppingCart /><Plus /></span></button></div>
       </div>
@@ -259,9 +266,10 @@ function MagnetBlock() {
 
 function HomePage() {
   const { products } = useStore();
+  const { isArabic } = useLanguage();
   return (
     <>
-      <section className="hero">
+      <section className={isArabic ? "hero hero-ar" : "hero"}>
         <img src={hero} alt="Sélection de jouets BECOM" />
         <div className="shell hero-content">
           <h1>De petits jeux.<br /><em>De grandes histoires.</em></h1>
@@ -308,7 +316,7 @@ function ShopPage() {
   const [category, setCategory] = useState("Toutes");
   const [query, setQuery] = useState("");
   const categories = ["Toutes", ...Array.from(new Set(products.map((product) => product.category)))];
-  const filtered = products.filter((product) => (category === "Toutes" || product.category === category) && product.name.toLowerCase().includes(query.toLowerCase()));
+  const filtered = products.filter((product) => (category === "Toutes" || product.category === category) && `${product.name} ${product.nameAr || ""}`.toLowerCase().includes(query.toLowerCase()));
 
   return (
     <main className="page-shell shell">
@@ -325,6 +333,7 @@ function ShopPage() {
 
 function ProductPage() {
   const { products } = useStore();
+  const { isArabic } = useLanguage();
   const { id } = useParams();
   const navigate = useNavigate();
   const { add } = useCart();
@@ -345,7 +354,7 @@ function ProductPage() {
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft /> Retour à la boutique</button>
       <div className="product-detail">
         <div className="detail-gallery"><ProductArt product={product} imageUrl={selectedImage} /><div className="thumbnail-row">{galleryImages.length ? galleryImages.map((url, index) => <button type="button" className={url === selectedImage ? "active" : ""} key={`${url}-${index}`} onClick={() => setSelectedImage(url)} aria-label={`Afficher la photo ${index + 1}`}><span className="gallery-thumb" style={{ backgroundImage: `url(${url})` }} /></button>) : <><button type="button" className="active"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button></>}</div></div>
-        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{product.name}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{product.description}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div><div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
+        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div><div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
       </div>
       <section className="detail-story"><div><span className="eyebrow">Dans la boîte</span><h2>Un jeu qui grandit avec eux</h2><p>Le design volontairement simple encourage l'enfant à inventer ses propres règles. Sans écran, sans scénario imposé, avec juste ce qu'il faut pour nourrir sa curiosité.</p></div><div className="detail-stats"><span><strong>+3</strong>compétences stimulées</span><span><strong>100%</strong>jeu libre</span><span><strong>4.9</strong>note familles</span></div></section>
       {recommendations.length > 0 && <section className="section recommendations"><div className="title-row"><SectionTitle kicker="Dans le même univers" title="Ils pourraient aussi aimer" /></div><div className="product-grid">{recommendations.map((item) => <ProductCard key={item.id} product={item} />)}</div></section>}
@@ -355,6 +364,7 @@ function ProductPage() {
 
 function AboutPage() {
   const { products } = useStore();
+  const { isArabic } = useLanguage();
   const featured = products[1] || products[0];
   const showcaseProducts = products.slice(0, 3);
   return (
@@ -371,7 +381,7 @@ function AboutPage() {
             {showcaseProducts.map((product, index) => (
               <article className={`about-orange-card card-${index + 1}`} key={product.id}>
                 <ProductArt product={product} />
-                <span>{product.name}</span>
+                <span>{productName(product, isArabic)}</span>
               </article>
             ))}
           </div>
@@ -402,6 +412,7 @@ function ContactPage() {
 function CheckoutPage() {
   const { lines, total, clear } = useCart();
   const { createOrder, shippingRates } = useStore();
+  const { isArabic } = useLanguage();
   const [done, setDone] = useState(false);
   const [deliveryMethod, setDeliveryMethod] = useState<"domicile" | "bureau">("domicile");
   const [selectedWilaya, setSelectedWilaya] = useState("");
@@ -425,7 +436,7 @@ function CheckoutPage() {
       shipping,
       total: total + shipping,
       status: "new",
-      items: lines.map((line) => ({ productId: line.product.id, name: line.product.name, quantity: line.quantity, price: line.product.price })),
+      items: lines.map((line) => ({ productId: line.product.id, name: productName(line.product, isArabic), quantity: line.quantity, price: line.product.price })),
       createdAt: new Date().toISOString(),
     };
     setSaving(true);
@@ -465,7 +476,7 @@ function CheckoutPage() {
       </form>
       <aside className="order-summary">
         <h2>Votre commande</h2>
-        {lines.map((line) => <div className="summary-line" key={line.product.id}><ProductArt product={line.product} /><span><strong>{line.product.name}</strong><small>Quantité : {line.quantity}</small></span><b>{money(line.product.price * line.quantity)}</b></div>)}
+        {lines.map((line) => <div className="summary-line" key={line.product.id}><ProductArt product={line.product} /><span><strong>{productName(line.product, isArabic)}</strong><small>Quantité : {line.quantity}</small></span><b>{money(line.product.price * line.quantity)}</b></div>)}
         <div className="summary-totals"><p><span>Sous-total</span><strong>{money(total)}</strong></p><p><span>Livraison</span><strong>{money(shipping)}</strong></p><p><span>Méthode</span><strong>{deliveryMethod === "domicile" ? "Domicile" : "Bureau"}</strong></p><p className="grand-total"><span>Total</span><strong>{money(total + shipping)}</strong></p></div>
       </aside>
     </main>
@@ -532,7 +543,7 @@ function AdminProducts() {
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<Product | null>(null);
   const filtered = products.filter((product) => product.name.toLowerCase().includes(query.toLowerCase()));
-  const emptyProduct = (): Product => ({ id: "", name: "", category: "BECOM", age: "Tous les âges", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", sprite: 0, stock: 0, description: "", skills: [] });
+  const emptyProduct = (): Product => ({ id: "", name: "", nameAr: "", category: "BECOM", age: "Tous les âges", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", sprite: 0, stock: 0, description: "", descriptionAr: "", skills: [] });
   const close = () => setDraft(null);
   const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -610,11 +621,13 @@ function AdminProducts() {
             </div>
             <div className="admin-form-grid">
               <label>Nom<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
+              <label>Nom arabe<input dir="rtl" value={draft.nameAr || ""} onChange={(event) => setDraft({ ...draft, nameAr: event.target.value })} /></label>
               <label>Prix (DA)<input required min="0" type="number" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
               <label>Ancien prix<input min="0" type="number" value={draft.oldPrice || ""} onChange={(event) => setDraft({ ...draft, oldPrice: event.target.value ? Number(event.target.value) : undefined })} /></label>
               <label>Stock<input required min="0" type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
               <label>Badge<input value={draft.badge || ""} onChange={(event) => setDraft({ ...draft, badge: event.target.value || undefined })} /></label>
               <label className="wide">Description<textarea required rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
+              <label className="wide">Description arabe<textarea dir="rtl" rows={4} value={draft.descriptionAr || ""} onChange={(event) => setDraft({ ...draft, descriptionAr: event.target.value })} /></label>
               <label className="wide">Compétences, séparées par des virgules<input value={draft.skills.join(", ")} onChange={(event) => setDraft({ ...draft, skills: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label>
             </div>
             <div className="admin-modal-actions"><PressButton label="Annuler" type="button" variant="secondary" onClick={close} /><PressButton label="Enregistrer le produit" type="submit" /></div>
@@ -650,7 +663,7 @@ function AdminUsers() {
 function AdminOrders() {
   const { orders, updateOrderStatus } = useStore();
   const [editing, setEditing] = useState<CustomerOrder | null>(null);
-  const statusLabel = (status: OrderStatus) => status === "new" ? "Nouvelle" : status === "progress" ? "En cours" : "Terminée";
+  const statusLabel = (status: OrderStatus) => status === "new" ? "Nouvelle" : status === "progress" ? "En cours" : status === "done" ? "Terminée" : status === "return" ? "Retour" : "Annulée";
   return (
     <>
       <section className="admin-table-card">
@@ -665,10 +678,12 @@ function AdminOrders() {
                 <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} produit{order.items.reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}<small>{order.items.map((item) => `${item.quantity}x ${item.name}`).join(", ")}</small></span>
                 <strong>{money(order.total)}</strong>
                 <div className="order-actions">
-                  <select value={order.status} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} aria-label={`Statut commande ${order.id.slice(0, 8)}`}>
+                  <select className={`status-select ${order.status}`} value={order.status} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} aria-label={`Statut commande ${order.id.slice(0, 8)}`}>
                     <option value="new">Nouvelle</option>
                     <option value="progress">En cours</option>
                     <option value="done">Terminée</option>
+                    <option value="return">Retour</option>
+                    <option value="cancelled">Annulée</option>
                   </select>
                   <button onClick={() => setEditing(order)} aria-label={`Voir la commande ${order.id.slice(0, 8)}`}><Pencil /></button>
                 </div>
@@ -692,11 +707,11 @@ function AdminOrders() {
               <p><strong>Commune</strong><span>{editing.commune || "-"}</span></p>
               <p><strong>Wilaya</strong><span>{editing.wilaya}</span></p>
               <p><strong>Livraison</strong><span>{editing.deliveryMethod === "domicile" ? "Domicile" : "Bureau"} · {money(editing.shipping)}</span></p>
-              <label>Statut<select value={editing.status} onChange={async (event) => {
+              <label>Statut<select className={`status-select ${editing.status}`} value={editing.status} onChange={async (event) => {
                 const status = event.target.value as OrderStatus;
                 await updateOrderStatus(editing.id, status);
                 setEditing({ ...editing, status });
-              }}><option value="new">Nouvelle</option><option value="progress">En cours</option><option value="done">Terminée</option></select></label>
+              }}><option value="new">Nouvelle</option><option value="progress">En cours</option><option value="done">Terminée</option><option value="return">Retour</option><option value="cancelled">Annulée</option></select></label>
               <div className="order-items-detail">
                 {editing.items.map((item) => <div key={`${item.productId}-${item.name}`}><span>{item.quantity}x {item.name}</span><strong>{money(item.price * item.quantity)}</strong></div>)}
               </div>
@@ -767,5 +782,5 @@ function StoreLayout() {
 
 export default function App() {
   const isAdmin = useLocation().pathname.startsWith("/admin");
-  return <CartProvider>{isAdmin ? <Routes><Route path="/admin/*" element={<AdminPage />} /></Routes> : <StoreLayout />}</CartProvider>;
+  return <LanguageProvider><CartProvider>{isAdmin ? <Routes><Route path="/admin/*" element={<AdminPage />} /></Routes> : <StoreLayout />}</CartProvider></LanguageProvider>;
 }
