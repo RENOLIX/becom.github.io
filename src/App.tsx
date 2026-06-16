@@ -113,10 +113,10 @@ function CartProvider({ children }: { children: ReactNode }) {
   return <CartContext.Provider value={{ lines, count, total, open, setOpen, add, change, remove, clear }}>{children}</CartContext.Provider>;
 }
 
-function ProductArt({ product, className = "" }: { product: Product; className?: string }) {
+function ProductArt({ product, className = "", imageUrl }: { product: Product; className?: string; imageUrl?: string }) {
   const x = [0, 33.333, 66.667, 100][product.sprite % 4];
   const y = product.sprite < 4 ? 0 : 100;
-  const customImage = product.imageUrls?.[0] || product.imageUrl;
+  const customImage = imageUrl || product.imageUrls?.[0] || product.imageUrl;
   return (
     <div
       className={`product-art ${className}`}
@@ -335,6 +335,12 @@ function ProductPage() {
   const { add } = useCart();
   const product = products.find((item) => item.id === id);
   const [quantity, setQuantity] = useState(1);
+  const [selectedImage, setSelectedImage] = useState<string | undefined>();
+  useEffect(() => {
+    const currentProduct = products.find((item) => item.id === id);
+    const images = currentProduct?.imageUrls?.length ? currentProduct.imageUrls : currentProduct?.imageUrl ? [currentProduct.imageUrl] : [];
+    setSelectedImage(images[0]);
+  }, [id, products]);
   if (!product) return <NotFound />;
   const recommendations = products.filter((item) => item.id !== product.id && item.age === product.age).slice(0, 3);
   const galleryImages = product.imageUrls?.length ? product.imageUrls : product.imageUrl ? [product.imageUrl] : [];
@@ -343,8 +349,8 @@ function ProductPage() {
     <main className="product-page shell">
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft /> Retour à la boutique</button>
       <div className="product-detail">
-        <div className="detail-gallery"><ProductArt product={product} /><div className="thumbnail-row">{galleryImages.length ? galleryImages.map((url, index) => <button className={index === 0 ? "active" : ""} key={`${url}-${index}`}><span className="gallery-thumb" style={{ backgroundImage: `url(${url})` }} /></button>) : <><button className="active"><ProductArt product={product} /></button><button><ProductArt product={product} /></button><button><ProductArt product={product} /></button></>}</div></div>
-        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{product.name}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span><a href="#avis">{product.reviews} avis vérifiés</a></div><p className="detail-description">{product.description}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div><div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
+        <div className="detail-gallery"><ProductArt product={product} imageUrl={selectedImage} /><div className="thumbnail-row">{galleryImages.length ? galleryImages.map((url, index) => <button type="button" className={url === selectedImage ? "active" : ""} key={`${url}-${index}`} onClick={() => setSelectedImage(url)} aria-label={`Afficher la photo ${index + 1}`}><span className="gallery-thumb" style={{ backgroundImage: `url(${url})` }} /></button>) : <><button type="button" className="active"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button></>}</div></div>
+        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{product.name}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{product.description}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div><div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
       </div>
       <section className="detail-story"><div><span className="eyebrow">Dans la boîte</span><h2>Un jeu qui grandit avec eux</h2><p>Le design volontairement simple encourage l'enfant à inventer ses propres règles. Sans écran, sans scénario imposé, avec juste ce qu'il faut pour nourrir sa curiosité.</p></div><div className="detail-stats"><span><strong>+3</strong>compétences stimulées</span><span><strong>100%</strong>jeu libre</span><span><strong>4.9</strong>note familles</span></div></section>
       {recommendations.length > 0 && <section className="section recommendations"><div className="title-row"><SectionTitle kicker="Dans le même univers" title="Ils pourraient aussi aimer" /></div><div className="product-grid">{recommendations.map((item) => <ProductCard key={item.id} product={item} />)}</div></section>}
