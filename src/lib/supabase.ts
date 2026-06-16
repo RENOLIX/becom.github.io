@@ -9,7 +9,7 @@ const headers = {
 
 const SESSION_KEY = "becom-supabase-session";
 export const ADMIN_SESSION_EVENT = "becom-admin-session-change";
-type SupabaseSession = { access_token: string; refresh_token: string; user: { id: string; email?: string } };
+type SupabaseSession = { access_token: string; refresh_token: string; user: { id: string; email?: string; user_metadata?: { name?: string; role?: string } } };
 
 export function getAdminSession(): SupabaseSession | null {
   try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null") as SupabaseSession | null; } catch { return null; }

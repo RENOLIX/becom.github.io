@@ -172,15 +172,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
 
     const syncAdminData = () => {
-      if (!getAdminSession()) return;
-      supabaseRequest<AdminUser[]>("admin_users?select=*&order=name")
-        .then((remoteUsers) => {
-          if (remoteUsers.length) setUsers(remoteUsers);
-        })
-        .catch((error) => {
-          console.error("Supabase users sync failed", error);
-          setSyncMode("error");
-        });
+      const session = getAdminSession();
+      if (!session) return;
+      if (session.user.user_metadata?.role === "admin") {
+        supabaseRequest<AdminUser[]>("admin_users?select=*&order=name")
+          .then((remoteUsers) => {
+            if (remoteUsers.length) setUsers(remoteUsers);
+          })
+          .catch((error) => {
+            console.error("Supabase users sync failed", error);
+            setSyncMode("error");
+          });
+      } else {
+        setUsers([]);
+      }
       supabaseRequest<Record<string, unknown>[]>("orders?select=*&order=created_at.desc")
         .then((remoteOrders) => {
           setOrders(remoteOrders.map(fromOrderRow));
