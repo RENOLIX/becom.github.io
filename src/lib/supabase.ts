@@ -39,7 +39,8 @@ export async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
 
   if (!response.ok) throw new Error(`Supabase ${response.status}`);
   if (response.status === 204) return [] as T;
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  return (text ? JSON.parse(text) : []) as T;
 }
 
 export async function createSupabaseAdminUser(input: { name: string; email: string; password: string; role: string }) {

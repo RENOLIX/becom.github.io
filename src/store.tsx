@@ -198,7 +198,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const createOrder = async (order: CustomerOrder) => {
-    const [saved] = await supabaseRequest<Record<string, unknown>[]>("orders", { method: "POST", body: JSON.stringify(toOrderRow(order)) });
+    const [saved] = await supabaseRequest<Record<string, unknown>[]>("orders", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(toOrderRow(order)) });
     const nextOrder = saved ? fromOrderRow(saved) : order;
     setOrders((current) => [nextOrder, ...current]);
     setSyncMode("supabase");

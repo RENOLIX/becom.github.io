@@ -51,7 +51,7 @@ create table if not exists public.shipping_rates (
 
 alter table public.products enable row level security;
 alter table public.admin_users enable row level security;
-alter table public.orders enable row level security;
+alter table public.orders disable row level security;
 alter table public.shipping_rates enable row level security;
 
 drop policy if exists "public products read" on public.products;
@@ -79,6 +79,7 @@ create policy "public shipping rates read" on public.shipping_rates for select u
 create policy "authenticated shipping rates management" on public.shipping_rates for all to authenticated using (true) with check (true);
 
 grant insert on table public.orders to anon, authenticated;
+revoke select, update, delete on table public.orders from anon;
 grant select, update on table public.orders to authenticated;
 grant select on table public.shipping_rates to anon, authenticated;
 grant all on table public.shipping_rates to authenticated;
