@@ -15,7 +15,12 @@ Deno.serve(async (request) => {
       { global: { headers: { Authorization: request.headers.get("Authorization") ?? "" } } },
     );
     const { data: caller } = await callerClient.auth.getUser();
-    if (caller.user?.user_metadata?.role !== "admin") {
+    const callerIsAdminFromToken = caller.user?.user_metadata?.role === "admin";
+    const { data: callerProfile } = caller.user
+      ? await callerClient.from("admin_users").select("role, active").eq("id", caller.user.id).maybeSingle()
+      : { data: null };
+    const callerIsAdminFromProfile = callerProfile?.role === "admin" && callerProfile?.active !== false;
+    if (!callerIsAdminFromToken && !callerIsAdminFromProfile) {
       return new Response(JSON.stringify({ error: "Accès administrateur requis" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const { name, email, password, role } = await request.json();
@@ -36,13 +41,13 @@ Deno.serve(async (request) => {
     });
     if (error) throw error;
 
-    const { error: profileError } = await supabase.from("admin_users").insert({
+    const { error: profileError } = await supabase.from("admin_users").upsert({
       id: data.user.id,
       name,
       email,
       role,
       active: true,
-    });
+    }, { onConflict: "id" });
     if (profileError) throw profileError;
 
     return new Response(JSON.stringify({ id: data.user.id }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

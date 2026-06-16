@@ -65,8 +65,29 @@ export async function createSupabaseAdminUser(input: { name: string; email: stri
     headers: { ...headers, Authorization: `Bearer ${session?.access_token || SUPABASE_KEY}` },
     body: JSON.stringify(input),
   });
-  if (!response.ok) throw new Error(`Supabase function ${response.status}`);
+  if (response.status === 404) return createSupabaseSignupUser(input);
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(details || `Supabase function ${response.status}`);
+  }
   return response.json() as Promise<{ id: string }>;
+}
+
+async function createSupabaseSignupUser(input: { name: string; email: string; password: string; role: string }) {
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      email: input.email,
+      password: input.password,
+      data: { name: input.name, role: input.role },
+    }),
+  });
+  const payload = await response.json() as { user?: { id?: string }; id?: string; msg?: string; error_description?: string; message?: string };
+  if (!response.ok) throw new Error(payload.error_description || payload.msg || payload.message || `Supabase signup ${response.status}`);
+  const id = payload.user?.id || payload.id;
+  if (!id) throw new Error("Utilisateur Supabase créé sans identifiant");
+  return { id };
 }
 
 export async function uploadProductImage(file: File) {
