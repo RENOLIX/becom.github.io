@@ -248,7 +248,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const createUser = async (user: AdminUser, password: string) => {
     const account = await createSupabaseAdminUser({ name: user.name, email: user.email, password, role: user.role });
     const nextUser = { ...user, id: account.id };
-    await saveUser(nextUser);
+    setUsers((current) => current.some((item) => item.id === nextUser.id)
+      ? current.map((item) => item.id === nextUser.id ? nextUser : item)
+      : [nextUser, ...current]);
+    setSyncMode("supabase");
+    try {
+      await supabaseRequest("admin_users?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(nextUser) });
+    } catch (error) {
+      console.warn("Supabase admin_users profile insert failed after auth signup", error);
+    }
   };
 
   const deleteUser = async (id: string) => {

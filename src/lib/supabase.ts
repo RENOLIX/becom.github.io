@@ -59,26 +59,6 @@ export async function supabaseAnonRequest<T>(path: string, init: RequestInit = {
 }
 
 export async function createSupabaseAdminUser(input: { name: string; email: string; password: string; role: string }) {
-  const session = getAdminSession();
-  let response: Response;
-  try {
-    response = await fetch(`${SUPABASE_URL}/functions/v1/create-admin-user`, {
-      method: "POST",
-      headers: { ...headers, Authorization: `Bearer ${session?.access_token || SUPABASE_KEY}` },
-      body: JSON.stringify(input),
-    });
-  } catch {
-    return createSupabaseSignupUser(input);
-  }
-  if (response.status === 404) return createSupabaseSignupUser(input);
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(details || `Supabase function ${response.status}`);
-  }
-  return response.json() as Promise<{ id: string }>;
-}
-
-async function createSupabaseSignupUser(input: { name: string; email: string; password: string; role: string }) {
   const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: "POST",
     headers,
