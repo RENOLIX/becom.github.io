@@ -39,7 +39,7 @@ type StoreValue = {
   users: AdminUser[];
   orders: CustomerOrder[];
   shippingRates: ShippingRate[];
-  syncMode: "local" | "supabase";
+  syncMode: "connecting" | "supabase" | "error";
   saveProduct: (product: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   createOrder: (order: CustomerOrder) => Promise<void>;
@@ -52,9 +52,6 @@ type StoreValue = {
 const defaultUsers: AdminUser[] = [];
 
 const StoreContext = createContext<StoreValue | null>(null);
-const readLocal = <T,>(key: string, fallback: T): T => {
-  try { return JSON.parse(localStorage.getItem(key) || "") as T; } catch { return fallback; }
-};
 
 const normalizeImageUrl = (product: Product) => product.imageUrls?.length
   ? JSON.stringify(product.imageUrls)
@@ -145,11 +142,11 @@ const mergeShippingRates = (rates: ShippingRate[]) => defaultShippingRates.map((
 });
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(() => readLocal("becom-products", initialProducts));
-  const [users, setUsers] = useState<AdminUser[]>(() => readLocal("becom-admin-users-v2", defaultUsers));
-  const [orders, setOrders] = useState<CustomerOrder[]>(() => readLocal("becom-orders", []));
-  const [shippingRates, setShippingRates] = useState<ShippingRate[]>(() => mergeShippingRates(readLocal("becom-shipping-rates", defaultShippingRates)));
-  const [syncMode, setSyncMode] = useState<"local" | "supabase">("local");
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [users, setUsers] = useState<AdminUser[]>(defaultUsers);
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const [shippingRates, setShippingRates] = useState<ShippingRate[]>(defaultShippingRates);
+  const [syncMode, setSyncMode] = useState<"connecting" | "supabase" | "error">("connecting");
 
   useEffect(() => {
     const syncPublicData = () => {
@@ -158,13 +155,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (remoteProducts.length) setProducts(remoteProducts.map(fromProductRow));
         setSyncMode("supabase");
       })
-      .catch(() => setSyncMode("local"));
+      .catch((error) => {
+        console.error("Supabase products sync failed", error);
+        setSyncMode("error");
+      });
 
       supabaseRequest<Record<string, unknown>[]>("shipping_rates?select=*&order=wilaya")
       .then((remoteRates) => {
         if (remoteRates.length) setShippingRates(mergeShippingRates(remoteRates.map(fromShippingRateRow)));
       })
-      .catch(() => undefined);
+      .catch((error) => {
+        console.error("Supabase shipping sync failed", error);
+        setSyncMode("error");
+      });
     };
 
     const syncAdminData = () => {
@@ -173,13 +176,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .then((remoteUsers) => {
           if (remoteUsers.length) setUsers(remoteUsers);
         })
-        .catch(() => undefined);
+        .catch((error) => {
+          console.error("Supabase users sync failed", error);
+          setSyncMode("error");
+        });
       supabaseRequest<Record<string, unknown>[]>("orders?select=*&order=created_at.desc")
         .then((remoteOrders) => {
           setOrders(remoteOrders.map(fromOrderRow));
           setSyncMode("supabase");
         })
-        .catch(() => undefined);
+        .catch((error) => {
+          console.error("Supabase orders sync failed", error);
+          setSyncMode("error");
+        });
     };
 
     syncPublicData();
@@ -193,24 +202,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  useEffect(() => localStorage.setItem("becom-products", JSON.stringify(products)), [products]);
-  useEffect(() => localStorage.setItem("becom-admin-users-v2", JSON.stringify(users)), [users]);
-  useEffect(() => localStorage.setItem("becom-orders", JSON.stringify(orders)), [orders]);
-  useEffect(() => localStorage.setItem("becom-shipping-rates", JSON.stringify(shippingRates)), [shippingRates]);
-
   const saveProduct = async (product: Product) => {
+    await supabaseRequest("products?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(toProductRow(product)) });
     setProducts((current) => current.some((item) => item.id === product.id)
       ? current.map((item) => item.id === product.id ? product : item)
       : [product, ...current]);
-    try {
-      await supabaseRequest("products?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(toProductRow(product)) });
-      setSyncMode("supabase");
-    } catch { setSyncMode("local"); }
+    setSyncMode("supabase");
   };
 
   const deleteProduct = async (id: string) => {
+    await supabaseRequest(`products?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
     setProducts((current) => current.filter((item) => item.id !== id));
-    try { await supabaseRequest(`products?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }); } catch { setSyncMode("local"); }
+    setSyncMode("supabase");
   };
 
   const createOrder = async (order: CustomerOrder) => {
@@ -222,36 +225,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const saveShippingRates = async (rates: ShippingRate[]) => {
     const nextRates = mergeShippingRates(rates);
+    await supabaseRequest("shipping_rates?on_conflict=wilaya", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(nextRates.map(toShippingRateRow)) });
     setShippingRates(nextRates);
-    try {
-      await supabaseRequest("shipping_rates?on_conflict=wilaya", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(nextRates.map(toShippingRateRow)) });
-      setSyncMode("supabase");
-    } catch { setSyncMode("local"); }
+    setSyncMode("supabase");
   };
 
   const saveUser = async (user: AdminUser) => {
+    await supabaseRequest("admin_users?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(user) });
     setUsers((current) => current.some((item) => item.id === user.id)
       ? current.map((item) => item.id === user.id ? user : item)
       : [user, ...current]);
-    try {
-      await supabaseRequest("admin_users?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(user) });
-      setSyncMode("supabase");
-    } catch { setSyncMode("local"); }
+    setSyncMode("supabase");
   };
 
   const createUser = async (user: AdminUser, password: string) => {
-    let nextUser = user;
-    try {
-      const account = await createSupabaseAdminUser({ name: user.name, email: user.email, password, role: user.role });
-      nextUser = { ...user, id: account.id };
-      setSyncMode("supabase");
-    } catch { setSyncMode("local"); }
+    const account = await createSupabaseAdminUser({ name: user.name, email: user.email, password, role: user.role });
+    const nextUser = { ...user, id: account.id };
     await saveUser(nextUser);
   };
 
   const deleteUser = async (id: string) => {
+    await supabaseRequest(`admin_users?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
     setUsers((current) => current.filter((item) => item.id !== id));
-    try { await supabaseRequest(`admin_users?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" }); } catch { setSyncMode("local"); }
+    setSyncMode("supabase");
   };
 
   return <StoreContext.Provider value={{ products, users, orders, shippingRates, syncMode, saveProduct, deleteProduct, createOrder, saveShippingRates, saveUser, createUser, deleteUser }}>{children}</StoreContext.Provider>;
