@@ -60,11 +60,16 @@ export async function supabaseAnonRequest<T>(path: string, init: RequestInit = {
 
 export async function createSupabaseAdminUser(input: { name: string; email: string; password: string; role: string }) {
   const session = getAdminSession();
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/create-admin-user`, {
-    method: "POST",
-    headers: { ...headers, Authorization: `Bearer ${session?.access_token || SUPABASE_KEY}` },
-    body: JSON.stringify(input),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${SUPABASE_URL}/functions/v1/create-admin-user`, {
+      method: "POST",
+      headers: { ...headers, Authorization: `Bearer ${session?.access_token || SUPABASE_KEY}` },
+      body: JSON.stringify(input),
+    });
+  } catch {
+    return createSupabaseSignupUser(input);
+  }
   if (response.status === 404) return createSupabaseSignupUser(input);
   if (!response.ok) {
     const details = await response.text();
