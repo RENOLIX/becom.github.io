@@ -50,7 +50,7 @@ import { PressButton } from "./components/PressButton";
 import { type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
 import { algeriaWilayas, type ShippingRate } from "./shipping";
-import { useStore, type AdminRole, type AdminUser, type CustomerOrder } from "./store";
+import { useStore, type AdminRole, type AdminUser, type CustomerOrder, type OrderStatus } from "./store";
 
 const money = (value: number) => `${value.toLocaleString("fr-DZ")} DA`;
 const sitePhone = "0558413077";
@@ -493,7 +493,35 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function Dashboard() {
-  return <><div className="metric-grid"><div><span>Chiffre d'affaires</span><strong>0 DA</strong><small>Aucune vente</small></div><div><span>Commandes</span><strong>0</strong><small>Aucune commande</small></div><div><span>Panier moyen</span><strong>0 DA</strong><small>Pas encore calculé</small></div><div><span>Alertes</span><strong>0</strong><small>Tout est prêt</small></div></div><div className="admin-empty-state"><PackageCheck /><h2>Administration prête à démarrer</h2><p>Les nouvelles commandes et les données d'activité apparaîtront ici.</p></div></>;
+  const { orders, products } = useStore();
+  const revenue = orders.reduce((sum, order) => sum + order.total, 0);
+  const average = orders.length ? Math.round(revenue / orders.length) : 0;
+  const pending = orders.filter((order) => order.status !== "done").length;
+  const lowStock = products.filter((product) => product.stock <= 3).length;
+  const latestOrders = orders.slice(0, 4);
+  return <>
+    <div className="metric-grid">
+      <div><span>Chiffre d'affaires</span><strong>{money(revenue)}</strong><small>{orders.length ? "Total des commandes" : "Aucune vente"}</small></div>
+      <div><span>Commandes</span><strong>{orders.length}</strong><small>{pending ? `${pending} à traiter` : orders.length ? "Toutes traitées" : "Aucune commande"}</small></div>
+      <div><span>Panier moyen</span><strong>{money(average)}</strong><small>{orders.length ? "Calculé depuis Supabase" : "Pas encore calculé"}</small></div>
+      <div><span>Alertes</span><strong>{lowStock}</strong><small>{lowStock ? "Stocks faibles" : "Tout est prêt"}</small></div>
+    </div>
+    <div className="admin-empty-state dashboard-orders">
+      <PackageCheck />
+      <h2>{orders.length ? "Dernières commandes" : "Aucune commande pour le moment"}</h2>
+      {latestOrders.length ? (
+        <div className="dashboard-order-list">
+          {latestOrders.map((order) => (
+            <div key={order.id}>
+              <strong>{order.customerName}</strong>
+              <span>{order.wilaya} · {money(order.total)}</span>
+              <em className={order.status}>{order.status === "new" ? "Nouvelle" : order.status === "progress" ? "En cours" : "Terminée"}</em>
+            </div>
+          ))}
+        </div>
+      ) : <p>Les nouvelles commandes apparaîtront ici automatiquement après validation.</p>}
+    </div>
+  </>;
 }
 
 function AdminProducts() {
@@ -611,27 +639,65 @@ function AdminUsers() {
 }
 
 function AdminOrders() {
-  const { orders } = useStore();
+  const { orders, updateOrderStatus } = useStore();
+  const [editing, setEditing] = useState<CustomerOrder | null>(null);
+  const statusLabel = (status: OrderStatus) => status === "new" ? "Nouvelle" : status === "progress" ? "En cours" : "Terminée";
   return (
-    <section className="admin-table-card">
-      <div className="admin-table-head"><h2>{orders.length} commande{orders.length > 1 ? "s" : ""}</h2></div>
-      {orders.length ? (
-        <div className="orders-table">
-          {orders.map((order) => (
-            <div key={order.id}>
-              <strong>#{order.id.slice(0, 8)}</strong>
-              <span>{order.customerName}<small>{order.phone}</small></span>
-              <span>{order.wilaya}<small>{order.deliveryMethod === "domicile" ? "Domicile" : "Bureau"} · {order.commune || order.address}</small></span>
-              <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} produit{order.items.reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}<small>{order.items.map((item) => `${item.quantity}x ${item.name}`).join(", ")}</small></span>
-              <strong>{money(order.total)}</strong>
-              <em className={order.status}>{order.status === "new" ? "Nouvelle" : order.status === "progress" ? "En cours" : "Terminée"}</em>
+    <>
+      <section className="admin-table-card">
+        <div className="admin-table-head"><h2>{orders.length} commande{orders.length > 1 ? "s" : ""}</h2></div>
+        {orders.length ? (
+          <div className="orders-table">
+            {orders.map((order) => (
+              <div key={order.id}>
+                <strong>#{order.id.slice(0, 8)}</strong>
+                <span>{order.customerName}<small>{order.phone}</small></span>
+                <span>{order.wilaya}<small>{order.deliveryMethod === "domicile" ? "Domicile" : "Bureau"} · {order.commune || order.address}</small></span>
+                <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} produit{order.items.reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}<small>{order.items.map((item) => `${item.quantity}x ${item.name}`).join(", ")}</small></span>
+                <strong>{money(order.total)}</strong>
+                <div className="order-actions">
+                  <select value={order.status} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} aria-label={`Statut commande ${order.id.slice(0, 8)}`}>
+                    <option value="new">Nouvelle</option>
+                    <option value="progress">En cours</option>
+                    <option value="done">Terminée</option>
+                  </select>
+                  <button onClick={() => setEditing(order)} aria-label={`Voir la commande ${order.id.slice(0, 8)}`}><Pencil /></button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="admin-empty-state small"><ShoppingCart /><h2>Aucune commande</h2><p>Les commandes des clients apparaîtront automatiquement ici après validation.</p></div>
+        )}
+      </section>
+      {editing && (
+        <div className="admin-modal-backdrop">
+          <div className="admin-modal compact">
+            <div className="admin-modal-head">
+              <div><span className="eyebrow">Commande #{editing.id.slice(0, 8)}</span><h2>{editing.customerName}</h2></div>
+              <button type="button" onClick={() => setEditing(null)} aria-label="Fermer"><X /></button>
             </div>
-          ))}
+            <div className="order-detail">
+              <p><strong>Téléphone</strong><span>{editing.phone}</span></p>
+              <p><strong>Adresse</strong><span>{editing.address}</span></p>
+              <p><strong>Commune</strong><span>{editing.commune || "-"}</span></p>
+              <p><strong>Wilaya</strong><span>{editing.wilaya}</span></p>
+              <p><strong>Livraison</strong><span>{editing.deliveryMethod === "domicile" ? "Domicile" : "Bureau"} · {money(editing.shipping)}</span></p>
+              <label>Statut<select value={editing.status} onChange={async (event) => {
+                const status = event.target.value as OrderStatus;
+                await updateOrderStatus(editing.id, status);
+                setEditing({ ...editing, status });
+              }}><option value="new">Nouvelle</option><option value="progress">En cours</option><option value="done">Terminée</option></select></label>
+              <div className="order-items-detail">
+                {editing.items.map((item) => <div key={`${item.productId}-${item.name}`}><span>{item.quantity}x {item.name}</span><strong>{money(item.price * item.quantity)}</strong></div>)}
+              </div>
+              <p className="order-total"><strong>Total</strong><span>{money(editing.total)}</span></p>
+              <em className={editing.status}>{statusLabel(editing.status)}</em>
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="admin-empty-state small"><ShoppingCart /><h2>Aucune commande</h2><p>Les commandes des clients apparaîtront automatiquement ici après validation.</p></div>
       )}
-    </section>
+    </>
   );
 }
 
