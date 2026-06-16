@@ -72,11 +72,16 @@ create policy "authenticated users read" on public.admin_users for select to aut
 create policy "admin users management" on public.admin_users for all to authenticated
   using ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin')
   with check ((auth.jwt() -> 'user_metadata' ->> 'role') = 'admin');
-create policy "public orders insert" on public.orders for insert to anon with check (true);
+create policy "public orders insert" on public.orders for insert with check (true);
 create policy "authenticated orders read" on public.orders for select to authenticated using (true);
 create policy "authenticated orders update" on public.orders for update to authenticated using (true) with check (true);
 create policy "public shipping rates read" on public.shipping_rates for select using (true);
 create policy "authenticated shipping rates management" on public.shipping_rates for all to authenticated using (true) with check (true);
+
+grant insert on table public.orders to anon, authenticated;
+grant select, update on table public.orders to authenticated;
+grant select on table public.shipping_rates to anon, authenticated;
+grant all on table public.shipping_rates to authenticated;
 
 insert into storage.buckets (id, name, public)
 values ('product-images', 'product-images', true)

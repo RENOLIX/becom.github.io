@@ -435,7 +435,7 @@ function CheckoutPage() {
       clear();
       setDone(true);
     } catch {
-      setError("La commande n'a pas pu être envoyée. Vérifiez que la table orders existe dans Supabase.");
+      setError("La commande n'a pas pu être envoyée. Vérifiez les règles SQL de la table orders dans Supabase.");
     } finally {
       setSaving(false);
     }
