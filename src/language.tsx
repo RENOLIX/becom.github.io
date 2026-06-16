@@ -15,6 +15,11 @@ const originalText = new WeakMap<Text, string>();
 const originalAttributes = new WeakMap<Element, Map<string, string>>();
 const translatedAttributes = ["placeholder", "aria-label", "title", "alt"];
 
+function readStoredLanguage(): Language {
+  if (typeof window === "undefined") return "fr";
+  return localStorage.getItem(STORAGE_KEY) === "ar" ? "ar" : "fr";
+}
+
 const arTranslations: Record<string, string> = {
   "Accueil": "الرئيسية",
   "Boutique": "المتجر",
@@ -284,10 +289,7 @@ function applyLanguage(root: ParentNode, language: Language) {
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const [language, setLanguage] = useState<Language>(() => {
-    if (typeof window === "undefined") return "fr";
-    return localStorage.getItem(STORAGE_KEY) === "ar" ? "ar" : "fr";
-  });
+  const [language, setLanguage] = useState<Language>(() => readStoredLanguage());
   const isAdminRoute = location.pathname.startsWith("/admin");
   const effectiveLanguage: Language = isAdminRoute ? "fr" : language;
 
@@ -306,10 +308,26 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     if (!root) return;
 
     applyLanguage(root, effectiveLanguage);
+    document.documentElement.classList.remove("language-preload");
     const observer = new MutationObserver(() => applyLanguage(root, effectiveLanguage));
     observer.observe(root, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();
   }, [effectiveLanguage, language]);
+
+  useEffect(() => {
+    const syncStoredLanguage = () => {
+      const storedLanguage = readStoredLanguage();
+      setLanguage((current) => current === storedLanguage ? current : storedLanguage);
+    };
+
+    syncStoredLanguage();
+    window.addEventListener("storage", syncStoredLanguage);
+    window.addEventListener("focus", syncStoredLanguage);
+    return () => {
+      window.removeEventListener("storage", syncStoredLanguage);
+      window.removeEventListener("focus", syncStoredLanguage);
+    };
+  }, []);
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
