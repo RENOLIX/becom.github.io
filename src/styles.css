@@ -119,6 +119,7 @@ html[dir="rtl"] .hero-actions { justify-content: flex-end; }
 .hero.hero-ar .hero-content h1,
 .hero.hero-ar .hero-content p { align-self: flex-end !important; margin-left: auto !important; margin-right: 0 !important; text-align: right !important; }
 .hero.hero-ar .hero-actions { margin-left: auto !important; margin-right: 0 !important; justify-content: flex-end !important; }
+.hero.hero-ar > img { transform: scaleX(-1); }
 html[dir="rtl"] .button svg,
 html[dir="rtl"] .press-button svg { transform: scaleX(-1); }
 html[dir="rtl"] input[type="email"],
@@ -408,7 +409,6 @@ html[dir="rtl"] .footer-grid > div:not(.footer-brand) { align-items: flex-end; t
 }
 
 @media (min-width: 781px) {
-  .hero.hero-ar > img,
   html[dir="rtl"] .hero > img { transform: scaleX(-1); }
   .hero.hero-ar::after,
   html[dir="rtl"] .hero::after { background: linear-gradient(270deg, rgba(255,253,249,.98) 0%, rgba(255,253,249,.92) 32%, rgba(255,253,249,.1) 62%, transparent 100%); }
