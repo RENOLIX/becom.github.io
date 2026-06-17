@@ -76,8 +76,8 @@ const parseImageUrls = (value: unknown) => {
 const toProductRow = (product: Product) => ({
   id: product.id, name: product.name, name_ar: product.nameAr || null, category: product.category, age: product.age,
   price: product.price, old_price: product.oldPrice ?? null, rating: product.rating,
-  reviews: product.reviews, badge: product.badge ?? null, color: product.color,
-  image_url: normalizeImageUrl(product), sprite: product.sprite, stock: product.stock, description: product.description, description_ar: product.descriptionAr || null, skills: product.skills,
+  reviews: product.reviews, badge: product.badge ?? null, color: product.color, color_label: product.colorLabel || null, show_color: !!product.showColor,
+  image_url: normalizeImageUrl(product), sprite: product.sprite, stock: product.stock, pieces_count: product.piecesCount ?? null, show_pieces: !!product.showPieces, description: product.description, description_ar: product.descriptionAr || null, skills: product.skills,
 });
 
 const fromProductRow = (row: Record<string, unknown>): Product => {
@@ -86,7 +86,7 @@ const fromProductRow = (row: Record<string, unknown>): Product => {
     id: String(row.id), name: String(row.name), nameAr: row.name_ar ? String(row.name_ar) : undefined, category: String(row.category), age: String(row.age),
     price: Number(row.price), oldPrice: row.old_price == null ? undefined : Number(row.old_price),
     rating: Number(row.rating), reviews: Number(row.reviews), badge: row.badge ? String(row.badge) : undefined,
-    color: String(row.color), ...images, sprite: Number(row.sprite), stock: Number(row.stock),
+    color: String(row.color), colorLabel: row.color_label ? String(row.color_label) : undefined, showColor: row.show_color === true, ...images, sprite: Number(row.sprite), stock: Number(row.stock), piecesCount: row.pieces_count == null ? undefined : Number(row.pieces_count), showPieces: row.show_pieces === true,
     description: String(row.description), descriptionAr: row.description_ar ? String(row.description_ar) : undefined, skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
   };
 };

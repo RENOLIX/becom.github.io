@@ -58,6 +58,23 @@ const sitePhone = "0558413077";
 const siteEmail = "becom.storedz@gmail.com";
 const productName = (product: Product, isArabic: boolean) => isArabic && product.nameAr ? product.nameAr : product.name;
 const productDescription = (product: Product, isArabic: boolean) => isArabic && product.descriptionAr ? product.descriptionAr : product.description;
+const namedColors: Record<string, string> = {
+  blanc: "#ffffff",
+  bleu: "#4c83bd",
+  gris: "#9ca3af",
+  jaune: "#ffd746",
+  marron: "#9a6a38",
+  noir: "#111827",
+  orange: "#fb923c",
+  rose: "#f9a8d4",
+  rouge: "#ff3c38",
+  vert: "#37d77a",
+  violet: "#8b5cf6",
+};
+const resolveProductColor = (value?: string) => {
+  const color = (value || "").trim().toLowerCase();
+  return namedColors[color] || value || "#e8f1fb";
+};
 
 type CartLine = { product: Product; quantity: number };
 type CartValue = {
@@ -354,7 +371,7 @@ function ProductPage() {
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft /> Retour à la boutique</button>
       <div className="product-detail">
         <div className="detail-gallery"><ProductArt product={product} imageUrl={selectedImage} /><div className="thumbnail-row">{galleryImages.length ? galleryImages.map((url, index) => <button type="button" className={url === selectedImage ? "active" : ""} key={`${url}-${index}`} onClick={() => setSelectedImage(url)} aria-label={`Afficher la photo ${index + 1}`}><span className="gallery-thumb" style={{ backgroundImage: `url(${url})` }} /></button>) : <><button type="button" className="active"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button></>}</div></div>
-        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div><div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
+        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div>{(product.showColor || product.showPieces) && <div className="product-specs">{product.showColor && <span><i style={{ background: resolveProductColor(product.colorLabel || product.color) }} /> Couleur <strong>{product.colorLabel || product.color}</strong></span>}{product.showPieces && <span>Pièces <strong>{product.piecesCount || 0}</strong></span>}</div>}<div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
       </div>
       <section className="detail-story"><div><span className="eyebrow">Dans la boîte</span><h2>Un jeu qui grandit avec eux</h2><p>Le design volontairement simple encourage l'enfant à inventer ses propres règles. Sans écran, sans scénario imposé, avec juste ce qu'il faut pour nourrir sa curiosité.</p></div><div className="detail-stats"><span><strong>+3</strong>compétences stimulées</span><span><strong>100%</strong>jeu libre</span><span><strong>4.9</strong>note familles</span></div></section>
       {recommendations.length > 0 && <section className="section recommendations"><div className="title-row"><SectionTitle kicker="Dans le même univers" title="Ils pourraient aussi aimer" /></div><div className="product-grid">{recommendations.map((item) => <ProductCard key={item.id} product={item} />)}</div></section>}
@@ -543,7 +560,7 @@ function AdminProducts() {
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<Product | null>(null);
   const filtered = products.filter((product) => product.name.toLowerCase().includes(query.toLowerCase()));
-  const emptyProduct = (): Product => ({ id: "", name: "", nameAr: "", category: "BECOM", age: "Tous les âges", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", sprite: 0, stock: 0, description: "", descriptionAr: "", skills: [] });
+  const emptyProduct = (): Product => ({ id: "", name: "", nameAr: "", category: "BECOM", age: "Tous les âges", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", colorLabel: "", showColor: false, sprite: 0, stock: 0, piecesCount: 0, showPieces: false, description: "", descriptionAr: "", skills: [] });
   const close = () => setDraft(null);
   const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
@@ -626,6 +643,10 @@ function AdminProducts() {
               <label>Ancien prix<input min="0" type="number" value={draft.oldPrice || ""} onChange={(event) => setDraft({ ...draft, oldPrice: event.target.value ? Number(event.target.value) : undefined })} /></label>
               <label>Stock<input required min="0" type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
               <label>Badge<input value={draft.badge || ""} onChange={(event) => setDraft({ ...draft, badge: event.target.value || undefined })} /></label>
+              <label className="feature-toggle"><input type="checkbox" checked={!!draft.showColor} onChange={(event) => setDraft({ ...draft, showColor: event.target.checked })} /> Activer la couleur</label>
+              <label className="color-field">Couleur<input value={draft.colorLabel || ""} onChange={(event) => setDraft({ ...draft, colorLabel: event.target.value, color: resolveProductColor(event.target.value) })} placeholder="Rouge, bleu, #ff3c38..." /><span className="color-preview" style={{ background: resolveProductColor(draft.colorLabel || draft.color) }} /></label>
+              <label className="feature-toggle"><input type="checkbox" checked={!!draft.showPieces} onChange={(event) => setDraft({ ...draft, showPieces: event.target.checked })} /> Activer le nombre de pièces</label>
+              <label>Nombre de pièces<input min="0" type="number" value={draft.piecesCount || ""} onChange={(event) => setDraft({ ...draft, piecesCount: event.target.value ? Number(event.target.value) : undefined })} /></label>
               <label className="wide">Description<textarea required rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
               <label className="wide">Description arabe<textarea dir="rtl" rows={4} value={draft.descriptionAr || ""} onChange={(event) => setDraft({ ...draft, descriptionAr: event.target.value })} /></label>
               <label className="wide">Compétences, séparées par des virgules<input value={draft.skills.join(", ")} onChange={(event) => setDraft({ ...draft, skills: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label>

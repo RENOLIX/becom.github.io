@@ -10,10 +10,14 @@ export type Product = {
   reviews: number;
   badge?: string;
   color: string;
+  colorLabel?: string;
+  showColor?: boolean;
   imageUrl?: string;
   imageUrls?: string[];
   sprite: number;
   stock: number;
+  piecesCount?: number;
+  showPieces?: boolean;
   description: string;
   descriptionAr?: string;
   skills: string[];
