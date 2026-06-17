@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { products as initialProducts, type Product } from "./data";
 import { ADMIN_SESSION_EVENT, createSupabaseAdminUser, getAdminSession, supabaseAnonRequest, supabaseRequest } from "./lib/supabase";
 import { defaultShippingRates, type ShippingRate } from "./shipping";
@@ -48,6 +48,7 @@ type StoreValue = {
   saveUser: (user: AdminUser) => Promise<void>;
   createUser: (user: AdminUser, password: string) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
+  refreshData: () => Promise<void>;
 };
 
 const defaultUsers: AdminUser[] = [];
@@ -73,20 +74,37 @@ const parseImageUrls = (value: unknown) => {
   return { imageUrl: raw, imageUrls: undefined };
 };
 
+const parseStringList = (value: unknown) => {
+  if (!value) return undefined;
+  const raw = String(value);
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (Array.isArray(parsed)) {
+      const values = parsed.map(String).map((item) => item.trim()).filter(Boolean);
+      return values.length ? values : undefined;
+    }
+  } catch {
+    // Plain comma-separated value from older rows.
+  }
+  const values = raw.split(",").map((item) => item.trim()).filter(Boolean);
+  return values.length ? values : undefined;
+};
+
 const toProductRow = (product: Product) => ({
   id: product.id, name: product.name, name_ar: product.nameAr || null, category: product.category, age: product.age,
   price: product.price, old_price: product.oldPrice ?? null, rating: product.rating,
-  reviews: product.reviews, badge: product.badge ?? null, color: product.color, color_label: product.colorLabel || null, show_color: !!product.showColor,
+  reviews: product.reviews, badge: product.badge ?? null, color: product.color, color_label: product.colorLabel || null, color_labels: product.colorLabels?.length ? JSON.stringify(product.colorLabels) : product.colorLabel ? JSON.stringify([product.colorLabel]) : null, show_color: !!product.showColor,
   image_url: normalizeImageUrl(product), sprite: product.sprite, stock: product.stock, pieces_count: product.piecesCount ?? null, show_pieces: !!product.showPieces, description: product.description, description_ar: product.descriptionAr || null, skills: product.skills,
 });
 
 const fromProductRow = (row: Record<string, unknown>): Product => {
   const images = parseImageUrls(row.image_url);
+  const colorLabels = parseStringList(row.color_labels) || parseStringList(row.color_label);
   return {
     id: String(row.id), name: String(row.name), nameAr: row.name_ar ? String(row.name_ar) : undefined, category: String(row.category), age: String(row.age),
     price: Number(row.price), oldPrice: row.old_price == null ? undefined : Number(row.old_price),
     rating: Number(row.rating), reviews: Number(row.reviews), badge: row.badge ? String(row.badge) : undefined,
-    color: String(row.color), colorLabel: row.color_label ? String(row.color_label) : undefined, showColor: row.show_color === true, ...images, sprite: Number(row.sprite), stock: Number(row.stock), piecesCount: row.pieces_count == null ? undefined : Number(row.pieces_count), showPieces: row.show_pieces === true,
+    color: String(row.color), colorLabel: colorLabels?.[0], colorLabels, showColor: row.show_color === true, ...images, sprite: Number(row.sprite), stock: Number(row.stock), piecesCount: row.pieces_count == null ? undefined : Number(row.pieces_count), showPieces: row.show_pieces === true,
     description: String(row.description), descriptionAr: row.description_ar ? String(row.description_ar) : undefined, skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
   };
 };
@@ -149,17 +167,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>(defaultShippingRates);
   const [syncMode, setSyncMode] = useState<"connecting" | "supabase" | "error">("connecting");
 
-  useEffect(() => {
-    const syncPublicData = () => {
+  const syncPublicData = useCallback(async () => {
+    await Promise.all([
       supabaseRequest<Record<string, unknown>[]>("products?select=*&order=name")
       .then((remoteProducts) => {
-        if (remoteProducts.length) setProducts(remoteProducts.map(fromProductRow));
+        setProducts(remoteProducts.map(fromProductRow));
         setSyncMode("supabase");
       })
       .catch((error) => {
         console.error("Supabase products sync failed", error);
         setSyncMode("error");
-      });
+      }),
 
       supabaseRequest<Record<string, unknown>[]>("shipping_rates?select=*&order=wilaya")
       .then((remoteRates) => {
@@ -168,25 +186,26 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .catch((error) => {
         console.error("Supabase shipping sync failed", error);
         setSyncMode("error");
-      });
-    };
+      }),
+    ]);
+  }, []);
 
-    const syncAdminData = () => {
-      const session = getAdminSession();
-      if (!session) return;
-      if (session.user.user_metadata?.role === "admin") {
-        supabaseRequest<AdminUser[]>("admin_users?select=*&order=name")
-          .then((remoteUsers) => {
-            if (remoteUsers.length) setUsers(remoteUsers);
-          })
-          .catch((error) => {
-            console.error("Supabase users sync failed", error);
-            setSyncMode("error");
-          });
-      } else {
-        setUsers([]);
-      }
-      supabaseRequest<Record<string, unknown>[]>("orders?select=*&order=created_at.desc")
+  const syncAdminData = useCallback(async () => {
+    const session = getAdminSession();
+    if (!session) return;
+    if (session.user.user_metadata?.role === "admin") {
+      await supabaseRequest<AdminUser[]>("admin_users?select=*&order=name")
+        .then((remoteUsers) => {
+          setUsers(remoteUsers);
+        })
+        .catch((error) => {
+          console.error("Supabase users sync failed", error);
+          setSyncMode("error");
+        });
+    } else {
+      setUsers([]);
+    }
+    await supabaseRequest<Record<string, unknown>[]>("orders?select=*&order=created_at.desc")
         .then((remoteOrders) => {
           setOrders(remoteOrders.map(fromOrderRow));
           setSyncMode("supabase");
@@ -195,25 +214,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           console.error("Supabase orders sync failed", error);
           setSyncMode("error");
         });
-    };
-
-    syncPublicData();
-    syncAdminData();
-    window.addEventListener(ADMIN_SESSION_EVENT, syncAdminData);
-    const adminRefresh = window.setInterval(syncAdminData, 15000);
-
-    return () => {
-      window.removeEventListener(ADMIN_SESSION_EVENT, syncAdminData);
-      window.clearInterval(adminRefresh);
-    };
   }, []);
 
+  const refreshData = useCallback(async () => {
+    await Promise.all([syncPublicData(), syncAdminData()]);
+  }, [syncAdminData, syncPublicData]);
+
+  useEffect(() => {
+    refreshData();
+    window.addEventListener(ADMIN_SESSION_EVENT, refreshData);
+    const adminRefresh = window.setInterval(refreshData, 15000);
+
+    return () => {
+      window.removeEventListener(ADMIN_SESSION_EVENT, refreshData);
+      window.clearInterval(adminRefresh);
+    };
+  }, [refreshData]);
+
   const saveProduct = async (product: Product) => {
-    await supabaseRequest("products?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(toProductRow(product)) });
-    setProducts((current) => current.some((item) => item.id === product.id)
-      ? current.map((item) => item.id === product.id ? product : item)
-      : [product, ...current]);
+    const [saved] = await supabaseRequest<Record<string, unknown>[]>("products?on_conflict=id", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=representation" }, body: JSON.stringify(toProductRow(product)) });
+    const nextProduct = saved ? fromProductRow(saved) : product;
+    setProducts((current) => current.some((item) => item.id === nextProduct.id)
+      ? current.map((item) => item.id === nextProduct.id ? nextProduct : item)
+      : [nextProduct, ...current]);
     setSyncMode("supabase");
+    syncPublicData();
   };
 
   const deleteProduct = async (id: string) => {
@@ -276,7 +301,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSyncMode("supabase");
   };
 
-  return <StoreContext.Provider value={{ products, users, orders, shippingRates, syncMode, saveProduct, deleteProduct, createOrder, updateOrderStatus, saveShippingRates, saveUser, createUser, deleteUser }}>{children}</StoreContext.Provider>;
+  return <StoreContext.Provider value={{ products, users, orders, shippingRates, syncMode, saveProduct, deleteProduct, createOrder, updateOrderStatus, saveShippingRates, saveUser, createUser, deleteUser, refreshData }}>{children}</StoreContext.Provider>;
 }
 
 export function useStore() {

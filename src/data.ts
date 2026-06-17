@@ -11,6 +11,7 @@ export type Product = {
   badge?: string;
   color: string;
   colorLabel?: string;
+  colorLabels?: string[];
   showColor?: boolean;
   imageUrl?: string;
   imageUrls?: string[];
