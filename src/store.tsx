@@ -49,7 +49,7 @@ type StoreValue = {
   saveUser: (user: AdminUser) => Promise<void>;
   createUser: (user: AdminUser, password: string) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
-  refreshData: () => Promise<void>;
+  refreshData: (forceLoading?: boolean) => Promise<void>;
 };
 
 const defaultUsers: AdminUser[] = [];
@@ -218,19 +218,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
   }, []);
 
-  const refreshData = useCallback(async () => {
-    if (!hasSynced.current) setSyncMode("connecting");
+  const refreshData = useCallback(async (forceLoading = false) => {
+    if (forceLoading || !hasSynced.current) setSyncMode("connecting");
     await Promise.all([syncPublicData(), syncAdminData()]);
     hasSynced.current = true;
   }, [syncAdminData, syncPublicData]);
 
   useEffect(() => {
     refreshData();
-    window.addEventListener(ADMIN_SESSION_EVENT, refreshData);
+    const handleAdminSession = () => { void refreshData(true); };
+    window.addEventListener(ADMIN_SESSION_EVENT, handleAdminSession);
     const adminRefresh = window.setInterval(refreshData, 15000);
 
     return () => {
-      window.removeEventListener(ADMIN_SESSION_EVENT, refreshData);
+      window.removeEventListener(ADMIN_SESSION_EVENT, handleAdminSession);
       window.clearInterval(adminRefresh);
     };
   }, [refreshData]);

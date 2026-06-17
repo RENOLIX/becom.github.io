@@ -511,7 +511,7 @@ function AdminPage() {
   const { refreshData } = useStore();
   const isAdmin = session?.user.user_metadata?.role === "admin";
   const currentSection = !isAdmin && section === "team" ? "dashboard" : section;
-  useEffect(() => { if (session) refreshData(); }, [currentSection, refreshData, session]);
+  useEffect(() => { if (session) refreshData(true); }, [currentSection, refreshData, session]);
   if (!session) return <AdminLogin onSuccess={() => window.location.reload()} />;
   const navigationItems = [["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["shipping", Truck, "Livraison"], ...(isAdmin ? [["team", Users, "Équipe"]] : [])] as const;
   const titles: Record<string, string> = { dashboard: "Vue d'ensemble", products: "Catalogue produits", orders: "Commandes", shipping: "Prix de livraison", team: "Utilisateurs et accès" };
@@ -536,8 +536,23 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function Dashboard() {
-  const { orders, products, syncMode } = useStore();
-  const loading = syncMode === "connecting";
+  const { orders, products, syncMode, refreshData } = useStore();
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      setDashboardLoading(true);
+      await refreshData(true);
+      if (active) setDashboardLoading(false);
+    };
+    load();
+    const retry = window.setTimeout(load, 450);
+    return () => {
+      active = false;
+      window.clearTimeout(retry);
+    };
+  }, [refreshData]);
+  const loading = syncMode === "connecting" || dashboardLoading;
   const revenue = orders.reduce((sum, order) => sum + order.total, 0);
   const average = orders.length ? Math.round(revenue / orders.length) : 0;
   const pending = orders.filter((order) => order.status !== "done").length;
@@ -552,7 +567,7 @@ function Dashboard() {
     </div>
     <div className="admin-empty-state dashboard-orders">
       <PackageCheck />
-      <h2>{orders.length ? "Dernières commandes" : "Aucune commande pour le moment"}</h2>
+      <h2>{loading ? "Chargement des commandes" : orders.length ? "Dernières commandes" : "Aucune commande pour le moment"}</h2>
       {latestOrders.length ? (
         <div className="dashboard-order-list">
           {latestOrders.map((order) => (
@@ -563,7 +578,7 @@ function Dashboard() {
             </div>
           ))}
         </div>
-      ) : <p>Les nouvelles commandes apparaîtront ici automatiquement après validation.</p>}
+      ) : <p>{loading ? "Lecture des données Supabase en cours..." : "Les nouvelles commandes apparaîtront ici automatiquement après validation."}</p>}
     </div>
   </>;
 }
