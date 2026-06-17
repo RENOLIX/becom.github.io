@@ -33,12 +33,36 @@ export function signOutAdmin() {
   window.dispatchEvent(new Event(ADMIN_SESSION_EVENT));
 }
 
+async function refreshAdminSession() {
+  const current = getAdminSession();
+  if (!current?.refresh_token) return null;
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ refresh_token: current.refresh_token }),
+  });
+  if (!response.ok) {
+    localStorage.removeItem(SESSION_KEY);
+    window.dispatchEvent(new Event(ADMIN_SESSION_EVENT));
+    return null;
+  }
+  const session = await response.json() as SupabaseSession;
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  window.dispatchEvent(new Event(ADMIN_SESSION_EVENT));
+  return session;
+}
+
 export async function supabaseRequest<T>(path: string, init: RequestInit = {}) {
   const session = getAdminSession();
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+  const request = (token?: string) => fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     ...init,
-    headers: { ...headers, Authorization: `Bearer ${session?.access_token || SUPABASE_KEY}`, Prefer: "return=representation", ...init.headers },
+    headers: { ...headers, Authorization: `Bearer ${token || SUPABASE_KEY}`, Prefer: "return=representation", ...init.headers },
   });
+  let response = await request(session?.access_token);
+  if ((response.status === 401 || response.status === 403) && session?.refresh_token) {
+    const refreshed = await refreshAdminSession();
+    if (refreshed?.access_token) response = await request(refreshed.access_token);
+  }
 
   if (!response.ok) throw new Error(`Supabase ${response.status}`);
   if (response.status === 204) return [] as T;
