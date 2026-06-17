@@ -75,7 +75,6 @@ const resolveProductColor = (value?: string) => {
   const color = (value || "").trim().toLowerCase();
   return namedColors[color] || value || "#e8f1fb";
 };
-const parseProductColors = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
 const productColors = (product: Product) => product.colorLabels?.length ? product.colorLabels : product.colorLabel ? [product.colorLabel] : product.color ? [product.color] : [];
 
 type CartLine = { product: Product; quantity: number; selectedColor?: string };
@@ -576,6 +575,22 @@ function AdminProducts() {
   const filtered = products.filter((product) => product.name.toLowerCase().includes(query.toLowerCase()));
   const emptyProduct = (): Product => ({ id: "", name: "", nameAr: "", category: "BECOM", age: "Tous les âges", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", colorLabel: "", colorLabels: [], showColor: false, sprite: 0, stock: 0, piecesCount: 0, showPieces: false, description: "", descriptionAr: "", skills: [] });
   const close = () => setDraft(null);
+  const colorInputs = draft ? (draft.colorLabels?.length ? draft.colorLabels : draft.colorLabel ? [draft.colorLabel] : [""]) : [""];
+  const updateColorInputs = (colors: string[]) => {
+    if (!draft) return;
+    const firstColor = colors.find((color) => color.trim())?.trim() || "";
+    setDraft({ ...draft, colorLabel: firstColor, colorLabels: colors });
+  };
+  const updateColorInput = (index: number, value: string) => {
+    const next = [...colorInputs];
+    next[index] = value;
+    updateColorInputs(next);
+  };
+  const addColorInput = () => {
+    if (!draft) return;
+    setDraft({ ...draft, colorLabels: [...colorInputs, ""], colorLabel: draft.colorLabel || "" });
+  };
+  const removeColorInput = (index: number) => updateColorInputs(colorInputs.filter((_, itemIndex) => itemIndex !== index));
   const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (!files.length || !draft) return;
@@ -596,7 +611,8 @@ function AdminProducts() {
     event.preventDefault();
     if (!draft) return;
     const id = draft.id || draft.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
-    await saveProduct({ ...draft, id });
+    const cleanColors = (draft.colorLabels?.length ? draft.colorLabels : draft.colorLabel ? [draft.colorLabel] : []).map((color) => color.trim()).filter(Boolean);
+    await saveProduct({ ...draft, id, colorLabel: cleanColors[0] || "", colorLabels: cleanColors });
     close();
   };
 
@@ -658,10 +674,16 @@ function AdminProducts() {
               <label>Stock<input required min="0" type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
               <label>Badge<input value={draft.badge || ""} onChange={(event) => setDraft({ ...draft, badge: event.target.value || undefined })} /></label>
               <label className="feature-toggle"><input type="checkbox" checked={!!draft.showColor} onChange={(event) => setDraft({ ...draft, showColor: event.target.checked })} /> Activer la couleur</label>
-              <label className="color-field">Couleurs<input value={(draft.colorLabels?.length ? draft.colorLabels : draft.colorLabel ? [draft.colorLabel] : []).join(", ")} onChange={(event) => {
-                const colors = parseProductColors(event.target.value);
-                setDraft({ ...draft, colorLabel: colors[0] || "", colorLabels: colors });
-              }} placeholder="Rouge, bleu, #ff3c38..." /><span className="color-preview-list">{(draft.colorLabels?.length ? draft.colorLabels : draft.colorLabel ? [draft.colorLabel] : []).map((color) => <i key={color} style={{ background: resolveProductColor(color) }} />)}</span></label>
+              <div className="color-field-list">
+                <span>Couleurs</span>
+                {colorInputs.map((color, index) => (
+                  <div className="color-line" key={index}>
+                    <input value={color} onChange={(event) => updateColorInput(index, event.target.value)} placeholder="Rouge, bleu, #ff3c38..." />
+                    <i style={{ background: resolveProductColor(color) }} />
+                    {index === colorInputs.length - 1 ? <button type="button" onClick={addColorInput} aria-label="Ajouter une couleur"><Plus /></button> : <button type="button" className="danger" onClick={() => removeColorInput(index)} aria-label="Retirer cette couleur"><X /></button>}
+                  </div>
+                ))}
+              </div>
               <label className="feature-toggle"><input type="checkbox" checked={!!draft.showPieces} onChange={(event) => setDraft({ ...draft, showPieces: event.target.checked })} /> Activer le nombre de pièces</label>
               <label>Nombre de pièces<input min="0" type="number" value={draft.piecesCount || ""} onChange={(event) => setDraft({ ...draft, piecesCount: event.target.value ? Number(event.target.value) : undefined })} /></label>
               <label className="wide">Description<textarea required rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
