@@ -47,7 +47,7 @@ import stickLeft from "./assets/stick-o-left.png";
 import stickRight from "./assets/stick-o-right.png";
 import whyBecomChild from "./assets/why-becom-child.png";
 import { PressButton } from "./components/PressButton";
-import { type Product } from "./data";
+import { type PieceOption, type Product } from "./data";
 import { getAdminSession, signInAdmin, signOutAdmin, uploadProductImage } from "./lib/supabase";
 import { algeriaWilayas, type ShippingRate } from "./shipping";
 import { LanguagePicker, LanguageProvider, useLanguage } from "./language";
@@ -76,17 +76,19 @@ const resolveProductColor = (value?: string) => {
   return namedColors[color] || value || "#e8f1fb";
 };
 const productColors = (product: Product) => product.colorLabels?.length ? product.colorLabels : product.colorLabel ? [product.colorLabel] : product.color ? [product.color] : [];
+const productPieceOptions = (product: Product) => product.pieceOptions?.filter((option) => option.pieces > 0 && option.name.trim() && option.price > 0) || [];
+const pieceKey = (piece?: PieceOption) => piece ? `${piece.pieces}-${piece.name}-${piece.price}` : "default";
 
-type CartLine = { product: Product; quantity: number; selectedColor?: string };
+type CartLine = { product: Product; quantity: number; selectedColor?: string; selectedPiece?: PieceOption };
 type CartValue = {
   lines: CartLine[];
   count: number;
   total: number;
   open: boolean;
   setOpen: (open: boolean) => void;
-  add: (product: Product, quantity?: number, selectedColor?: string) => void;
-  change: (id: string, quantity: number, selectedColor?: string) => void;
-  remove: (id: string, selectedColor?: string) => void;
+  add: (product: Product, quantity?: number, selectedColor?: string, selectedPiece?: PieceOption) => void;
+  change: (id: string, quantity: number, selectedColor?: string, selectedPiece?: PieceOption) => void;
+  remove: (id: string, selectedColor?: string, selectedPiece?: PieceOption) => void;
   clear: () => void;
 };
 
@@ -110,20 +112,20 @@ function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => localStorage.setItem("becom-cart", JSON.stringify(lines)), [lines]);
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
-  const total = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
-  const add = (product: Product, quantity = 1, selectedColor?: string) => {
+  const total = lines.reduce((sum, line) => sum + (line.selectedPiece?.price || line.product.price) * line.quantity, 0);
+  const add = (product: Product, quantity = 1, selectedColor?: string, selectedPiece?: PieceOption) => {
     setLines((current) => {
-      const found = current.find((line) => line.product.id === product.id && line.selectedColor === selectedColor);
+      const found = current.find((line) => line.product.id === product.id && line.selectedColor === selectedColor && pieceKey(line.selectedPiece) === pieceKey(selectedPiece));
       return found
-        ? current.map((line) => line.product.id === product.id && line.selectedColor === selectedColor ? { ...line, quantity: line.quantity + quantity } : line)
-        : [...current, { product, quantity, selectedColor }];
+        ? current.map((line) => line.product.id === product.id && line.selectedColor === selectedColor && pieceKey(line.selectedPiece) === pieceKey(selectedPiece) ? { ...line, quantity: line.quantity + quantity } : line)
+        : [...current, { product, quantity, selectedColor, selectedPiece }];
     });
     setOpen(true);
   };
-  const change = (id: string, quantity: number, selectedColor?: string) => setLines((current) => current
-    .map((line) => line.product.id === id && line.selectedColor === selectedColor ? { ...line, quantity } : line)
+  const change = (id: string, quantity: number, selectedColor?: string, selectedPiece?: PieceOption) => setLines((current) => current
+    .map((line) => line.product.id === id && line.selectedColor === selectedColor && pieceKey(line.selectedPiece) === pieceKey(selectedPiece) ? { ...line, quantity } : line)
     .filter((line) => line.quantity > 0));
-  const remove = (id: string, selectedColor?: string) => setLines((current) => current.filter((line) => !(line.product.id === id && line.selectedColor === selectedColor)));
+  const remove = (id: string, selectedColor?: string, selectedPiece?: PieceOption) => setLines((current) => current.filter((line) => !(line.product.id === id && line.selectedColor === selectedColor && pieceKey(line.selectedPiece) === pieceKey(selectedPiece))));
   const clear = () => setLines([]);
 
   return <CartContext.Provider value={{ lines, count, total, open, setOpen, add, change, remove, clear }}>{children}</CartContext.Provider>;
@@ -193,12 +195,12 @@ function CartDrawer() {
           {lines.length === 0 ? (
             <div className="empty-cart"><ShoppingCart /><h3>Votre panier attend son premier jouet</h3><p>Découvrez nos favoris classés par âge.</p><Link className="button primary" to="/boutique" onClick={() => setOpen(false)}>Explorer la boutique</Link></div>
           ) : lines.map((line) => (
-            <article className="cart-line" key={`${line.product.id}-${line.selectedColor || "default"}`}>
+            <article className="cart-line" key={`${line.product.id}-${line.selectedColor || "default"}-${pieceKey(line.selectedPiece)}`}>
               <ProductArt product={line.product} />
-              <div><Link to={`/produit/${line.product.id}`} onClick={() => setOpen(false)}>{productName(line.product, isArabic)}</Link><small>{line.product.age}{line.selectedColor ? ` · Couleur ${line.selectedColor}` : ""}</small><strong>{money(line.product.price)}</strong>
-                <div className="quantity-mini"><button onClick={() => change(line.product.id, line.quantity - 1, line.selectedColor)}><Minus /></button><span>{line.quantity}</span><button onClick={() => change(line.product.id, line.quantity + 1, line.selectedColor)}><Plus /></button></div>
+              <div><Link to={`/produit/${line.product.id}`} onClick={() => setOpen(false)}>{productName(line.product, isArabic)}</Link><small>{line.product.age}{line.selectedColor ? ` · Couleur ${line.selectedColor}` : ""}{line.selectedPiece ? ` · ${line.selectedPiece.pieces} pièces ${line.selectedPiece.name}` : ""}</small><strong>{money(line.selectedPiece?.price || line.product.price)}</strong>
+                <div className="quantity-mini"><button onClick={() => change(line.product.id, line.quantity - 1, line.selectedColor, line.selectedPiece)}><Minus /></button><span>{line.quantity}</span><button onClick={() => change(line.product.id, line.quantity + 1, line.selectedColor, line.selectedPiece)}><Plus /></button></div>
               </div>
-              <button className="remove-line" onClick={() => remove(line.product.id, line.selectedColor)} aria-label="Supprimer"><Trash2 /></button>
+              <button className="remove-line" onClick={() => remove(line.product.id, line.selectedColor, line.selectedPiece)} aria-label="Supprimer"><Trash2 /></button>
             </article>
           ))}
         </div>
@@ -359,24 +361,37 @@ function ProductPage() {
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | undefined>();
   const [selectedColor, setSelectedColor] = useState<string | undefined>();
+  const [selectedPiece, setSelectedPiece] = useState<PieceOption | undefined>();
+  const [optionError, setOptionError] = useState("");
   useEffect(() => {
     const currentProduct = products.find((item) => item.id === id);
     const images = currentProduct?.imageUrls?.length ? currentProduct.imageUrls : currentProduct?.imageUrl ? [currentProduct.imageUrl] : [];
     setSelectedImage(images[0]);
     const colors = currentProduct ? productColors(currentProduct) : [];
     setSelectedColor(colors[0]);
+    setSelectedPiece(undefined);
+    setOptionError("");
   }, [id, products]);
   if (!product) return <NotFound />;
   const recommendations = products.filter((item) => item.id !== product.id && item.age === product.age).slice(0, 3);
   const galleryImages = product.imageUrls?.length ? product.imageUrls : product.imageUrl ? [product.imageUrl] : [];
   const availableColors = productColors(product);
+  const availablePieces = product.showPieces ? productPieceOptions(product) : [];
+  const displayPrice = selectedPiece?.price || product.price;
+  const addToCart = () => {
+    if (availablePieces.length && !selectedPiece) {
+      setOptionError("Choisissez une option de pièces avant d'ajouter au panier.");
+      return;
+    }
+    add(product, quantity, product.showColor ? selectedColor : undefined, selectedPiece);
+  };
 
   return (
     <main className="product-page shell">
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft /> Retour à la boutique</button>
       <div className="product-detail">
         <div className="detail-gallery"><ProductArt product={product} imageUrl={selectedImage} /><div className="thumbnail-row">{galleryImages.length ? galleryImages.map((url, index) => <button type="button" className={url === selectedImage ? "active" : ""} key={`${url}-${index}`} onClick={() => setSelectedImage(url)} aria-label={`Afficher la photo ${index + 1}`}><span className="gallery-thumb" style={{ backgroundImage: `url(${url})` }} /></button>) : <><button type="button" className="active"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button></>}</div></div>
-        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div>{(product.showColor || product.showPieces) && <div className="product-specs">{product.showColor && <span>Couleurs <strong className="color-dots">{availableColors.map((color) => <i key={color} title={color} style={{ background: resolveProductColor(color) }} />)}</strong></span>}{product.showPieces && <span>Pièces <strong>{product.piecesCount || 0}</strong></span>}</div>}{product.showColor && availableColors.length > 0 && <div className="color-choice"><p>Choisir la couleur</p><div>{availableColors.map((color) => <button type="button" className={selectedColor === color ? "active" : ""} key={color} onClick={() => setSelectedColor(color)}><i style={{ background: resolveProductColor(color) }} />{color}</button>)}</div></div>}<div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity, product.showColor ? selectedColor : undefined)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
+        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div>{product.showColor && availableColors.length > 0 && <div className="color-choice"><p>Choisir la couleur</p><div>{availableColors.map((color) => <button type="button" className={selectedColor === color ? "active" : ""} key={color} onClick={() => setSelectedColor(color)}><i style={{ background: resolveProductColor(color) }} />{color}</button>)}</div></div>}{availablePieces.length > 0 && <div className="piece-choice"><p>Choisir une option</p><div>{availablePieces.map((option) => <button type="button" className={pieceKey(selectedPiece) === pieceKey(option) ? "active" : ""} key={pieceKey(option)} onClick={() => { setSelectedPiece(option); setOptionError(""); }}><span><strong>{option.pieces}</strong> pièces</span><b>{option.name}</b><em>{money(option.price)}</em></button>)}</div>{optionError && <small>{optionError}</small>}</div>}<div className="detail-price"><strong>{money(displayPrice)}</strong>{product.oldPrice && !selectedPiece && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button type="button" onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button type="button" className="button primary purchase" onClick={addToCart}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
       </div>
       <section className="detail-story"><div><span className="eyebrow">Dans la boîte</span><h2>Un jeu qui grandit avec eux</h2><p>Le design volontairement simple encourage l'enfant à inventer ses propres règles. Sans écran, sans scénario imposé, avec juste ce qu'il faut pour nourrir sa curiosité.</p></div><div className="detail-stats"><span><strong>+3</strong>compétences stimulées</span><span><strong>100%</strong>jeu libre</span><span><strong>4.9</strong>note familles</span></div></section>
       {recommendations.length > 0 && <section className="section recommendations"><div className="title-row"><SectionTitle kicker="Dans le même univers" title="Ils pourraient aussi aimer" /></div><div className="product-grid">{recommendations.map((item) => <ProductCard key={item.id} product={item} />)}</div></section>}
@@ -458,7 +473,7 @@ function CheckoutPage() {
       shipping,
       total: total + shipping,
       status: "new",
-      items: lines.map((line) => ({ productId: line.product.id, name: productName(line.product, isArabic), selectedColor: line.selectedColor, quantity: line.quantity, price: line.product.price })),
+      items: lines.map((line) => ({ productId: line.product.id, name: productName(line.product, isArabic), selectedColor: line.selectedColor, selectedPiece: line.selectedPiece, quantity: line.quantity, price: line.selectedPiece?.price || line.product.price })),
       createdAt: new Date().toISOString(),
     };
     setSaving(true);
@@ -498,7 +513,7 @@ function CheckoutPage() {
       </form>
       <aside className="order-summary">
         <h2>Votre commande</h2>
-        {lines.map((line) => <div className="summary-line" key={`${line.product.id}-${line.selectedColor || "default"}`}><ProductArt product={line.product} /><span><strong>{productName(line.product, isArabic)}</strong><small>Quantité : {line.quantity}{line.selectedColor ? ` · Couleur ${line.selectedColor}` : ""}</small></span><b>{money(line.product.price * line.quantity)}</b></div>)}
+        {lines.map((line) => <div className="summary-line" key={`${line.product.id}-${line.selectedColor || "default"}-${pieceKey(line.selectedPiece)}`}><ProductArt product={line.product} /><span><strong>{productName(line.product, isArabic)}</strong><small>Quantité : {line.quantity}{line.selectedColor ? ` · Couleur ${line.selectedColor}` : ""}{line.selectedPiece ? ` · ${line.selectedPiece.pieces} pièces ${line.selectedPiece.name}` : ""}</small></span><b>{money((line.selectedPiece?.price || line.product.price) * line.quantity)}</b></div>)}
         <div className="summary-totals"><p><span>Sous-total</span><strong>{money(total)}</strong></p><p><span>Livraison</span><strong>{money(shipping)}</strong></p><p><span>Méthode</span><strong>{deliveryMethod === "domicile" ? "Domicile" : "Bureau"}</strong></p><p className="grand-total"><span>Total</span><strong>{money(total + shipping)}</strong></p></div>
       </aside>
     </main>
@@ -576,7 +591,7 @@ function AdminProducts() {
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<Product | null>(null);
   const filtered = products.filter((product) => product.name.toLowerCase().includes(query.toLowerCase()));
-  const emptyProduct = (): Product => ({ id: "", name: "", nameAr: "", category: "BECOM", age: "Tous les âges", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", colorLabel: "", colorLabels: [], showColor: false, sprite: 0, stock: 0, piecesCount: 0, showPieces: false, description: "", descriptionAr: "", skills: [] });
+  const emptyProduct = (): Product => ({ id: "", name: "", nameAr: "", category: "BECOM", age: "Tous les âges", price: 0, rating: 5, reviews: 0, color: "#e8f1fb", colorLabel: "", colorLabels: [], showColor: false, sprite: 0, stock: 0, piecesCount: 0, pieceOptions: [], showPieces: false, description: "", descriptionAr: "", skills: [] });
   const close = () => setDraft(null);
   const colorInputs = draft ? (draft.colorLabels?.length ? draft.colorLabels : draft.colorLabel ? [draft.colorLabel] : [""]) : [""];
   const updateColorInputs = (colors: string[]) => {
@@ -594,6 +609,14 @@ function AdminProducts() {
     setDraft({ ...draft, colorLabels: [...colorInputs, ""], colorLabel: draft.colorLabel || "" });
   };
   const removeColorInput = (index: number) => updateColorInputs(colorInputs.filter((_, itemIndex) => itemIndex !== index));
+  const pieceInputs = draft ? (draft.pieceOptions?.length ? draft.pieceOptions : [{ pieces: 0, name: "", price: 0 }]) : [];
+  const updatePieceInputs = (options: PieceOption[]) => {
+    if (!draft) return;
+    setDraft({ ...draft, pieceOptions: options });
+  };
+  const updatePieceInput = (index: number, patch: Partial<PieceOption>) => updatePieceInputs(pieceInputs.map((option, itemIndex) => itemIndex === index ? { ...option, ...patch } : option));
+  const addPieceInput = () => updatePieceInputs([...pieceInputs, { pieces: 0, name: "", price: 0 }]);
+  const removePieceInput = (index: number) => updatePieceInputs(pieceInputs.filter((_, itemIndex) => itemIndex !== index));
   const uploadImage = async (event: ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     if (!files.length || !draft) return;
@@ -615,7 +638,8 @@ function AdminProducts() {
     if (!draft) return;
     const id = draft.id || draft.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
     const cleanColors = (draft.colorLabels?.length ? draft.colorLabels : draft.colorLabel ? [draft.colorLabel] : []).map((color) => color.trim()).filter(Boolean);
-    await saveProduct({ ...draft, id, colorLabel: cleanColors[0] || "", colorLabels: cleanColors });
+    const cleanPieces = (draft.pieceOptions || []).map((option) => ({ pieces: Number(option.pieces), name: option.name.trim(), price: Number(option.price) })).filter((option) => option.pieces > 0 && option.name && option.price > 0);
+    await saveProduct({ ...draft, id, colorLabel: cleanColors[0] || "", colorLabels: cleanColors, pieceOptions: cleanPieces, price: cleanPieces.length ? cleanPieces[0].price : draft.price });
     close();
   };
 
@@ -672,7 +696,7 @@ function AdminProducts() {
             <div className="admin-form-grid">
               <label>Nom<input required value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} /></label>
               <label>Nom arabe<input dir="rtl" value={draft.nameAr || ""} onChange={(event) => setDraft({ ...draft, nameAr: event.target.value })} /></label>
-              <label>Prix (DA)<input required min="0" type="number" value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
+              <label>Prix (DA)<input required min="0" type="number" disabled={!!draft.showPieces} value={draft.price} onChange={(event) => setDraft({ ...draft, price: Number(event.target.value) })} /></label>
               <label>Ancien prix<input min="0" type="number" value={draft.oldPrice || ""} onChange={(event) => setDraft({ ...draft, oldPrice: event.target.value ? Number(event.target.value) : undefined })} /></label>
               <label>Stock<input required min="0" type="number" value={draft.stock} onChange={(event) => setDraft({ ...draft, stock: Number(event.target.value) })} /></label>
               <label>Badge<input value={draft.badge || ""} onChange={(event) => setDraft({ ...draft, badge: event.target.value || undefined })} /></label>
@@ -688,7 +712,17 @@ function AdminProducts() {
                 ))}
               </div>
               <label className="feature-toggle"><input type="checkbox" checked={!!draft.showPieces} onChange={(event) => setDraft({ ...draft, showPieces: event.target.checked })} /> Activer le nombre de pièces</label>
-              <label>Nombre de pièces<input min="0" type="number" value={draft.piecesCount || ""} onChange={(event) => setDraft({ ...draft, piecesCount: event.target.value ? Number(event.target.value) : undefined })} /></label>
+              {draft.showPieces && <div className="piece-field-list">
+                <span>Options de pièces</span>
+                {pieceInputs.map((option, index) => (
+                  <div className="piece-line" key={index}>
+                    <input min="0" type="number" value={option.pieces || ""} onChange={(event) => updatePieceInput(index, { pieces: Number(event.target.value) })} placeholder="Nombre" />
+                    <input value={option.name} onChange={(event) => updatePieceInput(index, { name: event.target.value })} placeholder="Nom de la pièce" />
+                    <input min="0" type="number" value={option.price || ""} onChange={(event) => updatePieceInput(index, { price: Number(event.target.value) })} placeholder="Prix DA" />
+                    {index === pieceInputs.length - 1 ? <button type="button" onClick={addPieceInput} aria-label="Ajouter une option pièces"><Plus /></button> : <button type="button" className="danger" onClick={() => removePieceInput(index)} aria-label="Retirer cette option"><X /></button>}
+                  </div>
+                ))}
+              </div>}
               <label className="wide">Description<textarea required rows={4} value={draft.description} onChange={(event) => setDraft({ ...draft, description: event.target.value })} /></label>
               <label className="wide">Description arabe<textarea dir="rtl" rows={4} value={draft.descriptionAr || ""} onChange={(event) => setDraft({ ...draft, descriptionAr: event.target.value })} /></label>
               <label className="wide">Compétences, séparées par des virgules<input value={draft.skills.join(", ")} onChange={(event) => setDraft({ ...draft, skills: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) })} /></label>
@@ -738,7 +772,7 @@ function AdminOrders() {
                 <strong>#{order.id.slice(0, 8)}</strong>
                 <span>{order.customerName}<small>{order.phone}</small></span>
                 <span>{order.wilaya}<small>{order.deliveryMethod === "domicile" ? "Domicile" : "Bureau"} · {order.commune || order.address}</small></span>
-                <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} produit{order.items.reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}<small>{order.items.map((item) => `${item.quantity}x ${item.name}${item.selectedColor ? ` (${item.selectedColor})` : ""}`).join(", ")}</small></span>
+                <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} produit{order.items.reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}<small>{order.items.map((item) => `${item.quantity}x ${item.name}${item.selectedColor ? ` (${item.selectedColor})` : ""}${item.selectedPiece ? ` - ${item.selectedPiece.pieces} pièces ${item.selectedPiece.name}` : ""}`).join(", ")}</small></span>
                 <strong>{money(order.total)}</strong>
                 <div className="order-actions">
                   <select className={`status-select ${order.status}`} value={order.status} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} aria-label={`Statut commande ${order.id.slice(0, 8)}`}>
@@ -776,7 +810,7 @@ function AdminOrders() {
                 setEditing({ ...editing, status });
               }}><option value="new">Nouvelle</option><option value="progress">En cours</option><option value="done">Terminée</option><option value="return">Retour</option><option value="cancelled">Annulée</option></select></label>
               <div className="order-items-detail">
-                {editing.items.map((item) => <div key={`${item.productId}-${item.name}-${item.selectedColor || "default"}`}><span>{item.quantity}x {item.name}{item.selectedColor ? ` · Couleur ${item.selectedColor}` : ""}</span><strong>{money(item.price * item.quantity)}</strong></div>)}
+                {editing.items.map((item) => <div key={`${item.productId}-${item.name}-${item.selectedColor || "default"}-${pieceKey(item.selectedPiece)}`}><span>{item.quantity}x {item.name}{item.selectedColor ? ` · Couleur ${item.selectedColor}` : ""}{item.selectedPiece ? ` · ${item.selectedPiece.pieces} pièces ${item.selectedPiece.name}` : ""}</span><strong>{money(item.price * item.quantity)}</strong></div>)}
               </div>
               <p className="order-total"><strong>Total</strong><span>{money(editing.total)}</span></p>
               <em className={editing.status}>{statusLabel(editing.status)}</em>

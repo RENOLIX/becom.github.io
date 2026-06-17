@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { products as initialProducts, type Product } from "./data";
+import { products as initialProducts, type PieceOption, type Product } from "./data";
 import { ADMIN_SESSION_EVENT, createSupabaseAdminUser, getAdminSession, supabaseAnonRequest, supabaseRequest } from "./lib/supabase";
 import { defaultShippingRates, type ShippingRate } from "./shipping";
 
@@ -16,6 +16,7 @@ export type CustomerOrderItem = {
   productId: string;
   name: string;
   selectedColor?: string;
+  selectedPiece?: PieceOption;
   quantity: number;
   price: number;
 };
@@ -91,11 +92,26 @@ const parseStringList = (value: unknown) => {
   return values.length ? values : undefined;
 };
 
+const parsePieceOptions = (value: unknown): PieceOption[] | undefined => {
+  if (!value) return undefined;
+  try {
+    const parsed = typeof value === "string" ? JSON.parse(value) as unknown : value;
+    if (!Array.isArray(parsed)) return undefined;
+    const options = parsed.map((item) => {
+      const option = item as Record<string, unknown>;
+      return { pieces: Number(option.pieces), name: String(option.name || ""), price: Number(option.price) };
+    }).filter((option) => option.pieces > 0 && option.name.trim() && option.price > 0);
+    return options.length ? options : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 const toProductRow = (product: Product) => ({
   id: product.id, name: product.name, name_ar: product.nameAr || null, category: product.category, age: product.age,
   price: product.price, old_price: product.oldPrice ?? null, rating: product.rating,
   reviews: product.reviews, badge: product.badge ?? null, color: product.color, color_label: product.colorLabel || null, color_labels: product.colorLabels?.length ? JSON.stringify(product.colorLabels) : product.colorLabel ? JSON.stringify([product.colorLabel]) : null, show_color: !!product.showColor,
-  image_url: normalizeImageUrl(product), sprite: product.sprite, stock: product.stock, pieces_count: product.piecesCount ?? null, show_pieces: !!product.showPieces, description: product.description, description_ar: product.descriptionAr || null, skills: product.skills,
+  image_url: normalizeImageUrl(product), sprite: product.sprite, stock: product.stock, pieces_count: product.piecesCount ?? null, piece_options: product.pieceOptions?.length ? JSON.stringify(product.pieceOptions) : null, show_pieces: !!product.showPieces, description: product.description, description_ar: product.descriptionAr || null, skills: product.skills,
 });
 
 const fromProductRow = (row: Record<string, unknown>): Product => {
@@ -105,7 +121,7 @@ const fromProductRow = (row: Record<string, unknown>): Product => {
     id: String(row.id), name: String(row.name), nameAr: row.name_ar ? String(row.name_ar) : undefined, category: String(row.category), age: String(row.age),
     price: Number(row.price), oldPrice: row.old_price == null ? undefined : Number(row.old_price),
     rating: Number(row.rating), reviews: Number(row.reviews), badge: row.badge ? String(row.badge) : undefined,
-    color: String(row.color), colorLabel: colorLabels?.[0], colorLabels, showColor: row.show_color === true, ...images, sprite: Number(row.sprite), stock: Number(row.stock), piecesCount: row.pieces_count == null ? undefined : Number(row.pieces_count), showPieces: row.show_pieces === true,
+    color: String(row.color), colorLabel: colorLabels?.[0], colorLabels, showColor: row.show_color === true, ...images, sprite: Number(row.sprite), stock: Number(row.stock), piecesCount: row.pieces_count == null ? undefined : Number(row.pieces_count), pieceOptions: parsePieceOptions(row.piece_options), showPieces: row.show_pieces === true,
     description: String(row.description), descriptionAr: row.description_ar ? String(row.description_ar) : undefined, skills: Array.isArray(row.skills) ? row.skills.map(String) : [],
   };
 };
@@ -139,7 +155,8 @@ const fromOrderRow = (row: Record<string, unknown>): CustomerOrder => ({
   status: (row.status === "progress" || row.status === "done" || row.status === "return" || row.status === "cancelled" ? row.status : "new") as OrderStatus,
   items: Array.isArray(row.items) ? row.items.map((item) => {
     const value = item as Record<string, unknown>;
-    return { productId: String(value.productId), name: String(value.name), selectedColor: value.selectedColor ? String(value.selectedColor) : undefined, quantity: Number(value.quantity), price: Number(value.price) };
+    const selectedPieces = value.selectedPiece ? parsePieceOptions(JSON.stringify([value.selectedPiece])) : undefined;
+    return { productId: String(value.productId), name: String(value.name), selectedColor: value.selectedColor ? String(value.selectedColor) : undefined, selectedPiece: selectedPieces?.[0], quantity: Number(value.quantity), price: Number(value.price) };
   }) : [],
   createdAt: String(row.created_at || new Date().toISOString()),
 });
