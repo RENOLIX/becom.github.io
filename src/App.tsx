@@ -56,6 +56,8 @@ import { useStore, type AdminRole, type AdminUser, type CustomerOrder, type Orde
 const money = (value: number) => `${value.toLocaleString("fr-DZ")} DA`;
 const sitePhone = "0558413077";
 const siteEmail = "becom.storedz@gmail.com";
+const facebookUrl = "https://www.facebook.com/share/1ciNkaDzQG/?mibextid=wwXIfr";
+const instagramUrl = "https://www.instagram.com/becom.storedz?igsh=Z3pseGEyb2pmeHht";
 const productName = (product: Product, isArabic: boolean) => isArabic && product.nameAr ? product.nameAr : product.name;
 const productDescription = (product: Product, isArabic: boolean) => isArabic && product.descriptionAr ? product.descriptionAr : product.description;
 const namedColors: Record<string, string> = {
@@ -864,7 +866,7 @@ function Newsletter() {
 }
 
 function Footer() {
-  return <footer className="footer"><div className="shell footer-grid"><div className="footer-brand"><Logo /><p>Des jouets qui font grandir l'imagination, la confiance et les beaux souvenirs.</p><div><a href="#instagram" aria-label="Instagram"><Instagram /></a><a href={`mailto:${siteEmail}`} aria-label="Email"><Mail /></a></div></div><div><strong>Boutique</strong><Link to="/boutique">Tous les jouets</Link></div><div><strong>BECOM</strong><Link to="/a-propos">Notre histoire</Link><Link to="/contact">Contact</Link><Link to="/admin">Espace admin</Link><a href="#faq">Questions fréquentes</a></div><div><strong>Besoin d'aide ?</strong><a href={`tel:${sitePhone}`}>{sitePhone}</a><a href={`mailto:${siteEmail}`}>{siteEmail}</a><span>Sam - Jeu · 9h - 18h</span></div></div><div className="shell footer-bottom"><span>© 2026 BECOM Store. Tous droits réservés.</span><span>developed by SITEMAGIQUE</span></div></footer>;
+  return <footer className="footer"><div className="shell footer-grid"><div className="footer-brand"><Logo /><p>Des jouets qui font grandir l'imagination, la confiance et les beaux souvenirs.</p><div><a href={facebookUrl} target="_blank" rel="noreferrer" aria-label="Facebook"><span className="footer-social-letter">f</span></a><a href={instagramUrl} target="_blank" rel="noreferrer" aria-label="Instagram"><Instagram /></a><a href={`mailto:${siteEmail}`} aria-label="Email"><Mail /></a></div></div><div><strong>Boutique</strong><Link to="/boutique">Tous les jouets</Link></div><div><strong>BECOM</strong><Link to="/a-propos">Notre histoire</Link><Link to="/contact">Contact</Link><Link to="/admin">Espace admin</Link><a href="#faq">Questions fréquentes</a></div><div><strong>Besoin d'aide ?</strong><a href={`tel:${sitePhone}`}>{sitePhone}</a><a href={`mailto:${siteEmail}`}>{siteEmail}</a><span>Sam - Jeu · 9h - 18h</span></div></div><div className="shell footer-bottom"><span>© 2026 BECOM Store. Tous droits réservés.</span><span>developed by SITEMAGIQUE</span></div></footer>;
 }
 
 function NotFound() {

@@ -246,6 +246,7 @@ html[dir="rtl"] .footer-grid > div:not(.footer-brand) { align-items: flex-end; t
 .footer-brand > div { display: flex; gap: 8px; margin-top: 22px; }
 .footer-brand > div a { width: 39px; height: 39px; border: 1px solid #314c67; border-radius: 12px; display: grid; place-items: center; }
 .footer-brand svg { width: 17px; }
+.footer-social-letter { color: #dce8f2; font: 900 20px/1 "DM Sans"; }
 .footer-grid > div:not(.footer-brand) { display: flex; flex-direction: column; align-items: flex-start; gap: 11px; }
 .footer-grid strong { color: white; font: 600 13px var(--font-title); margin-bottom: 7px; }
 .footer-grid a, .footer-grid span { color: #96aabe; font-size: 12px; }
