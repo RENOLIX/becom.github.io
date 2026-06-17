@@ -78,16 +78,16 @@ const resolveProductColor = (value?: string) => {
 const parseProductColors = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
 const productColors = (product: Product) => product.colorLabels?.length ? product.colorLabels : product.colorLabel ? [product.colorLabel] : product.color ? [product.color] : [];
 
-type CartLine = { product: Product; quantity: number };
+type CartLine = { product: Product; quantity: number; selectedColor?: string };
 type CartValue = {
   lines: CartLine[];
   count: number;
   total: number;
   open: boolean;
   setOpen: (open: boolean) => void;
-  add: (product: Product, quantity?: number) => void;
-  change: (id: string, quantity: number) => void;
-  remove: (id: string) => void;
+  add: (product: Product, quantity?: number, selectedColor?: string) => void;
+  change: (id: string, quantity: number, selectedColor?: string) => void;
+  remove: (id: string, selectedColor?: string) => void;
   clear: () => void;
 };
 
@@ -112,19 +112,19 @@ function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => localStorage.setItem("becom-cart", JSON.stringify(lines)), [lines]);
   const count = lines.reduce((sum, line) => sum + line.quantity, 0);
   const total = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
-  const add = (product: Product, quantity = 1) => {
+  const add = (product: Product, quantity = 1, selectedColor?: string) => {
     setLines((current) => {
-      const found = current.find((line) => line.product.id === product.id);
+      const found = current.find((line) => line.product.id === product.id && line.selectedColor === selectedColor);
       return found
-        ? current.map((line) => line.product.id === product.id ? { ...line, quantity: line.quantity + quantity } : line)
-        : [...current, { product, quantity }];
+        ? current.map((line) => line.product.id === product.id && line.selectedColor === selectedColor ? { ...line, quantity: line.quantity + quantity } : line)
+        : [...current, { product, quantity, selectedColor }];
     });
     setOpen(true);
   };
-  const change = (id: string, quantity: number) => setLines((current) => current
-    .map((line) => line.product.id === id ? { ...line, quantity } : line)
+  const change = (id: string, quantity: number, selectedColor?: string) => setLines((current) => current
+    .map((line) => line.product.id === id && line.selectedColor === selectedColor ? { ...line, quantity } : line)
     .filter((line) => line.quantity > 0));
-  const remove = (id: string) => setLines((current) => current.filter((line) => line.product.id !== id));
+  const remove = (id: string, selectedColor?: string) => setLines((current) => current.filter((line) => !(line.product.id === id && line.selectedColor === selectedColor)));
   const clear = () => setLines([]);
 
   return <CartContext.Provider value={{ lines, count, total, open, setOpen, add, change, remove, clear }}>{children}</CartContext.Provider>;
@@ -138,7 +138,7 @@ function ProductArt({ product, className = "", imageUrl }: { product: Product; c
   return (
     <div
       className={`product-art ${className}`}
-      style={{ backgroundImage: customImage ? `url(${customImage})` : `url(${sprite})`, backgroundPosition: customImage ? "center" : `${x}% ${y}%`, backgroundSize: customImage ? "cover" : undefined, backgroundColor: product.color }}
+      style={{ backgroundImage: customImage ? `url(${customImage})` : `url(${sprite})`, backgroundPosition: customImage ? "center" : `${x}% ${y}%`, backgroundSize: customImage ? "cover" : undefined, backgroundColor: customImage ? "#f4f8fc" : product.color }}
       role="img"
       aria-label={productName(product, isArabic)}
     />
@@ -194,12 +194,12 @@ function CartDrawer() {
           {lines.length === 0 ? (
             <div className="empty-cart"><ShoppingCart /><h3>Votre panier attend son premier jouet</h3><p>Découvrez nos favoris classés par âge.</p><Link className="button primary" to="/boutique" onClick={() => setOpen(false)}>Explorer la boutique</Link></div>
           ) : lines.map((line) => (
-            <article className="cart-line" key={line.product.id}>
+            <article className="cart-line" key={`${line.product.id}-${line.selectedColor || "default"}`}>
               <ProductArt product={line.product} />
-              <div><Link to={`/produit/${line.product.id}`} onClick={() => setOpen(false)}>{productName(line.product, isArabic)}</Link><small>{line.product.age}</small><strong>{money(line.product.price)}</strong>
-                <div className="quantity-mini"><button onClick={() => change(line.product.id, line.quantity - 1)}><Minus /></button><span>{line.quantity}</span><button onClick={() => change(line.product.id, line.quantity + 1)}><Plus /></button></div>
+              <div><Link to={`/produit/${line.product.id}`} onClick={() => setOpen(false)}>{productName(line.product, isArabic)}</Link><small>{line.product.age}{line.selectedColor ? ` · Couleur ${line.selectedColor}` : ""}</small><strong>{money(line.product.price)}</strong>
+                <div className="quantity-mini"><button onClick={() => change(line.product.id, line.quantity - 1, line.selectedColor)}><Minus /></button><span>{line.quantity}</span><button onClick={() => change(line.product.id, line.quantity + 1, line.selectedColor)}><Plus /></button></div>
               </div>
-              <button className="remove-line" onClick={() => remove(line.product.id)} aria-label="Supprimer"><Trash2 /></button>
+              <button className="remove-line" onClick={() => remove(line.product.id, line.selectedColor)} aria-label="Supprimer"><Trash2 /></button>
             </article>
           ))}
         </div>
@@ -359,21 +359,25 @@ function ProductPage() {
   const product = products.find((item) => item.id === id);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState<string | undefined>();
+  const [selectedColor, setSelectedColor] = useState<string | undefined>();
   useEffect(() => {
     const currentProduct = products.find((item) => item.id === id);
     const images = currentProduct?.imageUrls?.length ? currentProduct.imageUrls : currentProduct?.imageUrl ? [currentProduct.imageUrl] : [];
     setSelectedImage(images[0]);
+    const colors = currentProduct ? productColors(currentProduct) : [];
+    setSelectedColor(colors[0]);
   }, [id, products]);
   if (!product) return <NotFound />;
   const recommendations = products.filter((item) => item.id !== product.id && item.age === product.age).slice(0, 3);
   const galleryImages = product.imageUrls?.length ? product.imageUrls : product.imageUrl ? [product.imageUrl] : [];
+  const availableColors = productColors(product);
 
   return (
     <main className="product-page shell">
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft /> Retour à la boutique</button>
       <div className="product-detail">
         <div className="detail-gallery"><ProductArt product={product} imageUrl={selectedImage} /><div className="thumbnail-row">{galleryImages.length ? galleryImages.map((url, index) => <button type="button" className={url === selectedImage ? "active" : ""} key={`${url}-${index}`} onClick={() => setSelectedImage(url)} aria-label={`Afficher la photo ${index + 1}`}><span className="gallery-thumb" style={{ backgroundImage: `url(${url})` }} /></button>) : <><button type="button" className="active"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button></>}</div></div>
-        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div>{(product.showColor || product.showPieces) && <div className="product-specs">{product.showColor && <span>Couleurs <strong className="color-dots">{productColors(product).map((color) => <i key={color} title={color} style={{ background: resolveProductColor(color) }} />)}</strong></span>}{product.showPieces && <span>Pièces <strong>{product.piecesCount || 0}</strong></span>}</div>}<div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
+        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div>{(product.showColor || product.showPieces) && <div className="product-specs">{product.showColor && <span>Couleurs <strong className="color-dots">{availableColors.map((color) => <i key={color} title={color} style={{ background: resolveProductColor(color) }} />)}</strong></span>}{product.showPieces && <span>Pièces <strong>{product.piecesCount || 0}</strong></span>}</div>}{product.showColor && availableColors.length > 0 && <div className="color-choice"><p>Choisir la couleur</p><div>{availableColors.map((color) => <button type="button" className={selectedColor === color ? "active" : ""} key={color} onClick={() => setSelectedColor(color)}><i style={{ background: resolveProductColor(color) }} />{color}</button>)}</div></div>}<div className="detail-price"><strong>{money(product.price)}</strong>{product.oldPrice && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity"><button onClick={() => setQuantity(Math.max(1, quantity - 1))}><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity(quantity + 1)}><Plus /></button></div><button className="button primary purchase" onClick={() => add(product, quantity, product.showColor ? selectedColor : undefined)}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
       </div>
       <section className="detail-story"><div><span className="eyebrow">Dans la boîte</span><h2>Un jeu qui grandit avec eux</h2><p>Le design volontairement simple encourage l'enfant à inventer ses propres règles. Sans écran, sans scénario imposé, avec juste ce qu'il faut pour nourrir sa curiosité.</p></div><div className="detail-stats"><span><strong>+3</strong>compétences stimulées</span><span><strong>100%</strong>jeu libre</span><span><strong>4.9</strong>note familles</span></div></section>
       {recommendations.length > 0 && <section className="section recommendations"><div className="title-row"><SectionTitle kicker="Dans le même univers" title="Ils pourraient aussi aimer" /></div><div className="product-grid">{recommendations.map((item) => <ProductCard key={item.id} product={item} />)}</div></section>}
@@ -455,7 +459,7 @@ function CheckoutPage() {
       shipping,
       total: total + shipping,
       status: "new",
-      items: lines.map((line) => ({ productId: line.product.id, name: productName(line.product, isArabic), quantity: line.quantity, price: line.product.price })),
+      items: lines.map((line) => ({ productId: line.product.id, name: productName(line.product, isArabic), selectedColor: line.selectedColor, quantity: line.quantity, price: line.product.price })),
       createdAt: new Date().toISOString(),
     };
     setSaving(true);
@@ -495,7 +499,7 @@ function CheckoutPage() {
       </form>
       <aside className="order-summary">
         <h2>Votre commande</h2>
-        {lines.map((line) => <div className="summary-line" key={line.product.id}><ProductArt product={line.product} /><span><strong>{productName(line.product, isArabic)}</strong><small>Quantité : {line.quantity}</small></span><b>{money(line.product.price * line.quantity)}</b></div>)}
+        {lines.map((line) => <div className="summary-line" key={`${line.product.id}-${line.selectedColor || "default"}`}><ProductArt product={line.product} /><span><strong>{productName(line.product, isArabic)}</strong><small>Quantité : {line.quantity}{line.selectedColor ? ` · Couleur ${line.selectedColor}` : ""}</small></span><b>{money(line.product.price * line.quantity)}</b></div>)}
         <div className="summary-totals"><p><span>Sous-total</span><strong>{money(total)}</strong></p><p><span>Livraison</span><strong>{money(shipping)}</strong></p><p><span>Méthode</span><strong>{deliveryMethod === "domicile" ? "Domicile" : "Bureau"}</strong></p><p className="grand-total"><span>Total</span><strong>{money(total + shipping)}</strong></p></div>
       </aside>
     </main>
@@ -512,7 +516,12 @@ function AdminPage() {
   if (!session) return <AdminLogin onSuccess={() => window.location.reload()} />;
   const navigationItems = [["dashboard", LayoutDashboard, "Vue d'ensemble"], ["products", Box, "Produits"], ["orders", ShoppingCart, "Commandes"], ["shipping", Truck, "Livraison"], ...(isAdmin ? [["team", Users, "Équipe"]] : [])] as const;
   const titles: Record<string, string> = { dashboard: "Vue d'ensemble", products: "Catalogue produits", orders: "Commandes", shipping: "Prix de livraison", team: "Utilisateurs et accès" };
-  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{navigationItems.map(([id, Icon, label]) => <button className={currentSection === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><button className="admin-logout" onClick={() => { signOutAdmin(); setSession(null); }}><X /> Déconnexion</button><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[currentSection]}</h1><p className="sync-status supabase">actif</p></div></header>{currentSection === "dashboard" && <Dashboard />}{currentSection === "products" && <AdminProducts />}{currentSection === "orders" && <AdminOrders />}{currentSection === "shipping" && <AdminShipping />}{isAdmin && currentSection === "team" && <AdminUsers />}</section></main>;
+  return <main className="admin-shell"><aside className="admin-sidebar"><Logo /><nav>{navigationItems.map(([id, Icon, label]) => <button className={currentSection === id ? "active" : ""} onClick={() => setSection(id as string)} key={id as string}><Icon /> {label as string}</button>)}</nav><button className="admin-logout" onClick={() => { signOutAdmin(); setSession(null); }}><X /> Déconnexion</button><Link to="/"><Store /> Voir la boutique</Link></aside><section className="admin-content"><header><div><span className="eyebrow">Administration BECOM</span><h1>{titles[currentSection]}</h1><AdminSyncStatus /></div></header>{currentSection === "dashboard" && <Dashboard />}{currentSection === "products" && <AdminProducts />}{currentSection === "orders" && <AdminOrders />}{currentSection === "shipping" && <AdminShipping />}{isAdmin && currentSection === "team" && <AdminUsers />}</section></main>;
+}
+
+function AdminSyncStatus() {
+  const { syncMode } = useStore();
+  return <p className={`sync-status ${syncMode === "connecting" ? "connecting" : syncMode === "error" ? "error" : "supabase"}`}>{syncMode === "connecting" ? "actualisation" : syncMode === "error" ? "à vérifier" : "actif"}</p>;
 }
 
 function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
@@ -528,7 +537,8 @@ function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function Dashboard() {
-  const { orders, products } = useStore();
+  const { orders, products, syncMode } = useStore();
+  const loading = syncMode === "connecting";
   const revenue = orders.reduce((sum, order) => sum + order.total, 0);
   const average = orders.length ? Math.round(revenue / orders.length) : 0;
   const pending = orders.filter((order) => order.status !== "done").length;
@@ -536,10 +546,10 @@ function Dashboard() {
   const latestOrders = orders.slice(0, 4);
   return <>
     <div className="metric-grid">
-      <div><span>Chiffre d'affaires</span><strong>{money(revenue)}</strong><small>{orders.length ? "Total des commandes" : "Aucune vente"}</small></div>
-      <div><span>Commandes</span><strong>{orders.length}</strong><small>{pending ? `${pending} à traiter` : orders.length ? "Toutes traitées" : "Aucune commande"}</small></div>
-      <div><span>Panier moyen</span><strong>{money(average)}</strong><small>{orders.length ? "Calculé depuis Supabase" : "Pas encore calculé"}</small></div>
-      <div><span>Alertes</span><strong>{lowStock}</strong><small>{lowStock ? "Stocks faibles" : "Tout est prêt"}</small></div>
+      <div><span>Chiffre d'affaires</span><strong>{loading ? "..." : money(revenue)}</strong><small>{loading ? "Actualisation Supabase" : orders.length ? "Total des commandes" : "Aucune vente"}</small></div>
+      <div><span>Commandes</span><strong>{loading ? "..." : orders.length}</strong><small>{loading ? "Actualisation Supabase" : pending ? `${pending} à traiter` : orders.length ? "Toutes traitées" : "Aucune commande"}</small></div>
+      <div><span>Panier moyen</span><strong>{loading ? "..." : money(average)}</strong><small>{loading ? "Actualisation Supabase" : orders.length ? "Calculé depuis Supabase" : "Pas encore calculé"}</small></div>
+      <div><span>Alertes</span><strong>{loading ? "..." : lowStock}</strong><small>{loading ? "Actualisation Supabase" : lowStock ? "Stocks faibles" : "Tout est prêt"}</small></div>
     </div>
     <div className="admin-empty-state dashboard-orders">
       <PackageCheck />
@@ -650,7 +660,7 @@ function AdminProducts() {
               <label className="feature-toggle"><input type="checkbox" checked={!!draft.showColor} onChange={(event) => setDraft({ ...draft, showColor: event.target.checked })} /> Activer la couleur</label>
               <label className="color-field">Couleurs<input value={(draft.colorLabels?.length ? draft.colorLabels : draft.colorLabel ? [draft.colorLabel] : []).join(", ")} onChange={(event) => {
                 const colors = parseProductColors(event.target.value);
-                setDraft({ ...draft, colorLabel: colors[0] || "", colorLabels: colors, color: resolveProductColor(colors[0]) });
+                setDraft({ ...draft, colorLabel: colors[0] || "", colorLabels: colors });
               }} placeholder="Rouge, bleu, #ff3c38..." /><span className="color-preview-list">{(draft.colorLabels?.length ? draft.colorLabels : draft.colorLabel ? [draft.colorLabel] : []).map((color) => <i key={color} style={{ background: resolveProductColor(color) }} />)}</span></label>
               <label className="feature-toggle"><input type="checkbox" checked={!!draft.showPieces} onChange={(event) => setDraft({ ...draft, showPieces: event.target.checked })} /> Activer le nombre de pièces</label>
               <label>Nombre de pièces<input min="0" type="number" value={draft.piecesCount || ""} onChange={(event) => setDraft({ ...draft, piecesCount: event.target.value ? Number(event.target.value) : undefined })} /></label>
@@ -703,7 +713,7 @@ function AdminOrders() {
                 <strong>#{order.id.slice(0, 8)}</strong>
                 <span>{order.customerName}<small>{order.phone}</small></span>
                 <span>{order.wilaya}<small>{order.deliveryMethod === "domicile" ? "Domicile" : "Bureau"} · {order.commune || order.address}</small></span>
-                <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} produit{order.items.reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}<small>{order.items.map((item) => `${item.quantity}x ${item.name}`).join(", ")}</small></span>
+                <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)} produit{order.items.reduce((sum, item) => sum + item.quantity, 0) > 1 ? "s" : ""}<small>{order.items.map((item) => `${item.quantity}x ${item.name}${item.selectedColor ? ` (${item.selectedColor})` : ""}`).join(", ")}</small></span>
                 <strong>{money(order.total)}</strong>
                 <div className="order-actions">
                   <select className={`status-select ${order.status}`} value={order.status} onChange={(event) => updateOrderStatus(order.id, event.target.value as OrderStatus)} aria-label={`Statut commande ${order.id.slice(0, 8)}`}>
@@ -741,7 +751,7 @@ function AdminOrders() {
                 setEditing({ ...editing, status });
               }}><option value="new">Nouvelle</option><option value="progress">En cours</option><option value="done">Terminée</option><option value="return">Retour</option><option value="cancelled">Annulée</option></select></label>
               <div className="order-items-detail">
-                {editing.items.map((item) => <div key={`${item.productId}-${item.name}`}><span>{item.quantity}x {item.name}</span><strong>{money(item.price * item.quantity)}</strong></div>)}
+                {editing.items.map((item) => <div key={`${item.productId}-${item.name}-${item.selectedColor || "default"}`}><span>{item.quantity}x {item.name}{item.selectedColor ? ` · Couleur ${item.selectedColor}` : ""}</span><strong>{money(item.price * item.quantity)}</strong></div>)}
               </div>
               <p className="order-total"><strong>Total</strong><span>{money(editing.total)}</span></p>
               <em className={editing.status}>{statusLabel(editing.status)}</em>

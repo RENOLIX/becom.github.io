@@ -295,6 +295,12 @@ html[dir="rtl"] .footer-grid > div:not(.footer-brand) { align-items: flex-end; t
 .product-specs i { width: 18px; height: 18px; border: 2px solid white; border-radius: 6px; box-shadow: 0 5px 12px rgba(31,64,94,.16); }
 .product-specs strong { color: var(--ink); font-size: 12px; }
 .product-specs .color-dots { display: inline-flex; align-items: center; gap: 5px; }
+.color-choice { margin-top: 19px; }
+.color-choice p { margin: 0 0 9px; color: #5d7387; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.color-choice > div { display: flex; flex-wrap: wrap; gap: 9px; }
+.color-choice button { min-height: 43px; padding: 0 13px 0 10px; border: 1px solid #dce8f2; border-radius: 14px; background: white; color: var(--ink); display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 0 #e1e9ef; transition: transform .18s, box-shadow .18s, border-color .18s; }
+.color-choice button i { width: 22px; height: 22px; border: 3px solid white; border-radius: 8px; box-shadow: 0 6px 13px rgba(31,64,94,.16); }
+.color-choice button.active { border-color: #3f75aa; background: #eef6ff; box-shadow: inset 0 4px 8px rgba(25,73,116,.12), 0 1px 0 #32699f; transform: translateY(3px); }
 .detail-price { display: flex; gap: 12px; align-items: baseline; margin-top: 27px; }.detail-price strong { font: 700 31px var(--font-title); }.detail-price del { color: #95a2ae; }
 .stock { margin: 8px 0 28px; color: #59806b; font-size: 12px; font-weight: 700; }.stock i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 7px; box-shadow: 0 0 0 4px #e6f9ee; }
 .purchase-row { display: grid; grid-template-columns: 120px 1fr; gap: 13px; }

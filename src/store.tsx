@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { products as initialProducts, type Product } from "./data";
 import { ADMIN_SESSION_EVENT, createSupabaseAdminUser, getAdminSession, supabaseAnonRequest, supabaseRequest } from "./lib/supabase";
 import { defaultShippingRates, type ShippingRate } from "./shipping";
@@ -15,6 +15,7 @@ export type OrderStatus = "new" | "progress" | "done" | "return" | "cancelled";
 export type CustomerOrderItem = {
   productId: string;
   name: string;
+  selectedColor?: string;
   quantity: number;
   price: number;
 };
@@ -138,7 +139,7 @@ const fromOrderRow = (row: Record<string, unknown>): CustomerOrder => ({
   status: (row.status === "progress" || row.status === "done" || row.status === "return" || row.status === "cancelled" ? row.status : "new") as OrderStatus,
   items: Array.isArray(row.items) ? row.items.map((item) => {
     const value = item as Record<string, unknown>;
-    return { productId: String(value.productId), name: String(value.name), quantity: Number(value.quantity), price: Number(value.price) };
+    return { productId: String(value.productId), name: String(value.name), selectedColor: value.selectedColor ? String(value.selectedColor) : undefined, quantity: Number(value.quantity), price: Number(value.price) };
   }) : [],
   createdAt: String(row.created_at || new Date().toISOString()),
 });
@@ -166,6 +167,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>(defaultShippingRates);
   const [syncMode, setSyncMode] = useState<"connecting" | "supabase" | "error">("connecting");
+  const hasSynced = useRef(false);
 
   const syncPublicData = useCallback(async () => {
     await Promise.all([
@@ -217,7 +219,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshData = useCallback(async () => {
+    if (!hasSynced.current) setSyncMode("connecting");
     await Promise.all([syncPublicData(), syncAdminData()]);
+    hasSynced.current = true;
   }, [syncAdminData, syncPublicData]);
 
   useEffect(() => {
@@ -238,7 +242,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ? current.map((item) => item.id === nextProduct.id ? nextProduct : item)
       : [nextProduct, ...current]);
     setSyncMode("supabase");
-    syncPublicData();
   };
 
   const deleteProduct = async (id: string) => {
