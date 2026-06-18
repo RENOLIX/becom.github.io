@@ -261,7 +261,7 @@ function applyLanguage(root: ParentNode, language: Language) {
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
-      if (!parent || parent.closest("script, style, noscript, textarea")) return NodeFilter.FILTER_REJECT;
+      if (!parent || parent.closest("script, style, noscript, textarea, [data-no-translate]")) return NodeFilter.FILTER_REJECT;
       if (!normalize(node.nodeValue ?? "")) return NodeFilter.FILTER_REJECT;
       return NodeFilter.FILTER_ACCEPT;
     },
@@ -278,6 +278,7 @@ function applyLanguage(root: ParentNode, language: Language) {
 
   translatedAttributes.forEach((attribute) => {
     root.querySelectorAll?.(`[${attribute}]`).forEach((element) => {
+      if (element.closest("[data-no-translate]")) return;
       const original = storeOriginalAttribute(element, attribute);
       if (original !== null) {
         const nextValue = translate(original, language);
