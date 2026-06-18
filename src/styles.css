@@ -316,7 +316,11 @@ html[dir="rtl"] .footer-grid > div:not(.footer-brand) { align-items: flex-end; t
 .stock { margin: 8px 0 28px; color: #59806b; font-size: 12px; font-weight: 700; }.stock i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 7px; box-shadow: 0 0 0 4px #e6f9ee; }
 .purchase-row { display: grid; grid-template-columns: 120px 1fr; gap: 13px; }
 .quantity { border: 1px solid var(--line); border-radius: 15px; display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; background: white; }
-.quantity button { border: 0; background: transparent; display: grid; place-items: center; cursor: pointer; }.quantity svg { width: 16px; }.quantity span { text-align: center; font-weight: 800; }
+.quantity button { min-width: 0; min-height: 48px; padding: 0; border: 0; background: transparent; color: var(--ink); display: grid; place-items: center; cursor: pointer; touch-action: manipulation; position: relative; z-index: 1; }
+.quantity button:hover { background: #edf5fc; }
+.quantity button:active { background: #dcecf9; transform: scale(.94); }
+.quantity svg { width: 16px; pointer-events: none; }
+.quantity output { text-align: center; font-weight: 800; }
 .purchase { justify-content: center; }
 .detail-assurances { margin-top: 31px; padding-top: 25px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
 .detail-assurances > div { display: flex; gap: 9px; }.detail-assurances svg { width: 19px; color: var(--blue); flex: 0 0 auto; }.detail-assurances span { display: grid; }.detail-assurances strong { font-size: 11px; }.detail-assurances small { color: #8b99a5; font-size: 9px; }
