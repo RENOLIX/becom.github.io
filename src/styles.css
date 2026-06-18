@@ -312,7 +312,7 @@ html[dir="rtl"] .footer-grid > div:not(.footer-brand) { align-items: flex-end; t
 .piece-choice button em { padding: 8px 10px; border-radius: 12px; color: #19324f; background: #ffef8f; font-style: normal; font-size: 12px; font-weight: 900; }
 .piece-choice button.active { border-color: #3f75aa; background: #eef6ff; box-shadow: inset 0 4px 8px rgba(25,73,116,.12), 0 1px 0 #32699f; transform: translateY(4px); }
 .piece-choice small { display: block; margin-top: 10px; color: #c9434b; font-size: 12px; font-weight: 800; }
-.detail-price { display: flex; gap: 12px; align-items: baseline; margin-top: 27px; }.detail-price strong { font: 700 31px var(--font-title); }.detail-price del { color: #95a2ae; }
+.detail-price { display: flex; flex-wrap: wrap; gap: 7px 12px; align-items: baseline; margin-top: 27px; }.detail-price > span { flex-basis: 100%; color: #718496; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }.detail-price strong { font: 700 31px var(--font-title); }.detail-price small { color: #718496; font-size: 11px; font-weight: 700; }.detail-price del { color: #95a2ae; }
 .stock { margin: 8px 0 28px; color: #59806b; font-size: 12px; font-weight: 700; }.stock i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); margin-right: 7px; box-shadow: 0 0 0 4px #e6f9ee; }
 .purchase-row { display: grid; grid-template-columns: 120px 1fr; gap: 13px; }
 .quantity { border: 1px solid var(--line); border-radius: 15px; display: grid; grid-template-columns: repeat(3, 1fr); align-items: center; background: white; }
