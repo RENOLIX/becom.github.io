@@ -60,6 +60,36 @@ const facebookUrl = "https://www.facebook.com/share/1ciNkaDzQG/?mibextid=wwXIfr"
 const instagramUrl = "https://www.instagram.com/becom.storedz?igsh=Z3pseGEyb2pmeHht";
 const productName = (product: Product, isArabic: boolean) => isArabic && product.nameAr ? product.nameAr : product.name;
 const productDescription = (product: Product, isArabic: boolean) => isArabic && product.descriptionAr ? product.descriptionAr : product.description;
+const productCategory = (category: string, isArabic: boolean) => {
+  if (!isArabic) return category;
+  const categories: Record<string, string> = {
+    jeux: "ألعاب",
+    imagination: "خيال",
+    éveil: "تنمية مبكرة",
+    puzzles: "ألغاز",
+    construction: "بناء",
+    peluches: "دمى محشوة",
+    "plein air": "ألعاب خارجية",
+  };
+  return categories[category.trim().toLowerCase()] || category;
+};
+const productColorName = (color: string, isArabic: boolean) => {
+  if (!isArabic) return color;
+  const colors: Record<string, string> = {
+    blanc: "أبيض",
+    bleu: "أزرق",
+    gris: "رمادي",
+    jaune: "أصفر",
+    marron: "بني",
+    noir: "أسود",
+    orange: "برتقالي",
+    rose: "وردي",
+    rouge: "أحمر",
+    vert: "أخضر",
+    violet: "بنفسجي",
+  };
+  return colors[color.trim().toLowerCase()] || color;
+};
 const namedColors: Record<string, string> = {
   blanc: "#ffffff",
   bleu: "#4c83bd",
@@ -383,7 +413,7 @@ function ProductPage() {
   const activeColor = selectedColor && availableColors.includes(selectedColor) ? selectedColor : availableColors[0];
   const addToCart = () => {
     if (availablePieces.length && !selectedPiece) {
-      setOptionError("Choisissez une option de pièces avant d'ajouter au panier.");
+      setOptionError(isArabic ? "اختر خيار عدد القطع قبل الإضافة إلى السلة." : "Choisissez une option de pièces avant d'ajouter au panier.");
       return;
     }
     add(product, quantity, product.showColor ? activeColor : undefined, selectedPiece);
@@ -394,9 +424,9 @@ function ProductPage() {
       <button className="back-link" onClick={() => navigate(-1)}><ArrowLeft /> Retour à la boutique</button>
       <div className="product-detail">
         <div className="detail-gallery"><ProductArt product={product} imageUrl={activeImage} /><div className="thumbnail-row">{galleryImages.length ? galleryImages.map((url, index) => <button type="button" className={url === activeImage ? "active" : ""} key={`${url}-${index}`} onClick={() => setSelectedImage(url)} aria-label={`Afficher la photo ${index + 1}`}><span className="gallery-thumb" style={{ backgroundImage: `url(${url})` }} /></button>) : <><button type="button" className="active"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button><button type="button"><ProductArt product={product} /></button></>}</div></div>
-        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{product.category} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div>{product.showColor && availableColors.length > 0 && <div className="color-choice"><p>Choisir la couleur</p><div>{availableColors.map((color) => <button type="button" className={activeColor === color ? "active" : ""} key={color} onClick={() => setSelectedColor(color)}><i style={{ background: resolveProductColor(color) }} />{color}</button>)}</div></div>}{availablePieces.length > 0 && <div className="piece-choice"><p>Choisir une option</p><div>{availablePieces.map((option) => <button type="button" className={selectedPieceKey === pieceKey(option) ? "active" : ""} key={pieceKey(option)} onClick={() => { setSelectedPieceKey(pieceKey(option)); setOptionError(""); }}><span><strong>{option.pieces}</strong> pièces</span><b>{option.name}</b><em>{money(option.price)}</em></button>)}</div>{optionError && <small>{optionError}</small>}</div>}<div className="detail-price" aria-live="polite" data-no-translate><strong>{money(displayPrice)}</strong>{product.oldPrice && !selectedPiece && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity" data-no-translate><button type="button" aria-label="Diminuer la quantité" onClick={() => setQuantity((current) => Math.max(1, current - 1))}><Minus /></button><span className="quantity-value">{quantity}</span><button type="button" aria-label="Augmenter la quantité" onClick={() => setQuantity((current) => current + 1)}><Plus /></button></div><button type="button" className="button primary purchase" onClick={addToCart}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
+        <div className="detail-copy"><div className="detail-top"><span className="product-badge static">{product.badge || "Sélection BECOM"}</span><button className="icon-button"><Heart /></button></div><span className="eyebrow">{productCategory(product.category, isArabic)} · {product.age}</span><h1>{productName(product, isArabic)}</h1><div className="rating"><span><Star fill="currentColor" /> {product.rating}</span></div><p className="detail-description">{productDescription(product, isArabic)}</p><div className="skill-list">{product.skills.map((skill) => <span key={skill}><Sparkles /> {skill}</span>)}</div>{product.showColor && availableColors.length > 0 && <div className="color-choice"><p>{isArabic ? "اختر اللون" : "Choisir la couleur"}</p><div>{availableColors.map((color) => <button type="button" className={activeColor === color ? "active" : ""} key={color} onClick={() => setSelectedColor(color)}><i style={{ background: resolveProductColor(color) }} />{productColorName(color, isArabic)}</button>)}</div></div>}{availablePieces.length > 0 && <div className="piece-choice"><p>{isArabic ? "اختر خيارا" : "Choisir une option"}</p><div>{availablePieces.map((option) => <button type="button" className={selectedPieceKey === pieceKey(option) ? "active" : ""} key={pieceKey(option)} onClick={() => { setSelectedPieceKey(pieceKey(option)); setOptionError(""); }}><span><strong data-no-translate>{option.pieces}</strong> {isArabic ? "قطعة" : "pièces"}</span><b>{option.name}</b><em data-no-translate>{money(option.price)}</em></button>)}</div>{optionError && <small>{optionError}</small>}</div>}<div className="detail-price" aria-live="polite" data-no-translate><strong>{money(displayPrice)}</strong>{product.oldPrice && !selectedPiece && <del>{money(product.oldPrice)}</del>}</div><div className="stock"><i /> En stock · expédition sous 24/48h</div><div className="purchase-row"><div className="quantity" data-no-translate><button type="button" aria-label="Diminuer la quantité" onClick={() => setQuantity((current) => Math.max(1, current - 1))}><Minus /></button><span className="quantity-value">{quantity}</span><button type="button" aria-label="Augmenter la quantité" onClick={() => setQuantity((current) => current + 1)}><Plus /></button></div><button type="button" className="button primary purchase" onClick={addToCart}>Ajouter au panier <ShoppingBag /></button></div><div className="detail-assurances"><div><Truck /><span><strong>Livraison rapide</strong><small>À partir de 500 DA</small></span></div><div><ShieldCheck /><span><strong>Paiement sécurisé</strong><small>Ou à la livraison</small></span></div><div><Gift /><span><strong>Option cadeau</strong><small>Message personnalisé</small></span></div></div></div>
       </div>
-      <section className="detail-story"><div><span className="eyebrow">Dans la boîte</span><h2>Un jeu qui grandit avec eux</h2><p>Le design volontairement simple encourage l'enfant à inventer ses propres règles. Sans écran, sans scénario imposé, avec juste ce qu'il faut pour nourrir sa curiosité.</p></div><div className="detail-stats"><span><strong>+3</strong>compétences stimulées</span><span><strong>100%</strong>jeu libre</span><span><strong>4.9</strong>note familles</span></div></section>
+      <section className="detail-story"><div><span className="eyebrow">Dans la boîte</span><h2>Un jeu qui grandit avec eux</h2><p>{isArabic ? "يشجع التصميم البسيط والمدروس الطفل على ابتكار قواعده الخاصة. بلا شاشة ولا سيناريو مفروض، فقط ما يكفي لتنمية فضوله وإطلاق خياله." : "Le design volontairement simple encourage l'enfant à inventer ses propres règles. Sans écran, sans scénario imposé, avec juste ce qu'il faut pour nourrir sa curiosité."}</p></div><div className="detail-stats"><span><strong>+3</strong>compétences stimulées</span><span><strong>100%</strong>jeu libre</span><span><strong>4.9</strong>note familles</span></div></section>
       {recommendations.length > 0 && <section className="section recommendations"><div className="title-row"><SectionTitle kicker="Dans le même univers" title="Ils pourraient aussi aimer" /></div><div className="product-grid">{recommendations.map((item) => <ProductCard key={item.id} product={item} />)}</div></section>}
     </main>
   );
