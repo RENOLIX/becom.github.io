@@ -174,7 +174,7 @@ function Header() {
           <LanguagePicker />
           <button className="cart-button" onClick={() => setOpen(true)} aria-label={`Panier, ${count} produits`}>
             <ShoppingCart />
-            <span>{count}</span>
+            <span data-no-translate>{count}</span>
           </button>
         </div>
       </div>
@@ -199,14 +199,14 @@ function CartDrawer() {
           ) : lines.map((line) => (
             <article className="cart-line" key={`${line.product.id}-${line.selectedColor || "default"}-${pieceKey(line.selectedPiece)}`}>
               <ProductArt product={line.product} />
-              <div><Link to={`/produit/${line.product.id}`} onClick={() => setOpen(false)}>{productName(line.product, isArabic)}</Link><small>{line.product.age}{line.selectedColor ? ` · Couleur ${line.selectedColor}` : ""}{line.selectedPiece ? ` · ${line.selectedPiece.pieces} pièces ${line.selectedPiece.name}` : ""}</small><strong>{money(line.selectedPiece?.price || line.product.price)}</strong>
-                <div className="quantity-mini"><button onClick={() => change(line.product.id, line.quantity - 1, line.selectedColor, line.selectedPiece)}><Minus /></button><span>{line.quantity}</span><button onClick={() => change(line.product.id, line.quantity + 1, line.selectedColor, line.selectedPiece)}><Plus /></button></div>
+              <div><Link to={`/produit/${line.product.id}`} onClick={() => setOpen(false)}>{productName(line.product, isArabic)}</Link><small>{line.product.age}{line.selectedColor ? ` · Couleur ${line.selectedColor}` : ""}{line.selectedPiece ? ` · ${line.selectedPiece.pieces} pièces ${line.selectedPiece.name}` : ""}</small><strong data-no-translate>{money(line.selectedPiece?.price || line.product.price)}</strong>
+                <div className="quantity-mini" data-no-translate><button type="button" aria-label="Diminuer la quantité" onClick={() => change(line.product.id, line.quantity - 1, line.selectedColor, line.selectedPiece)}><Minus /></button><span>{line.quantity}</span><button type="button" aria-label="Augmenter la quantité" onClick={() => change(line.product.id, line.quantity + 1, line.selectedColor, line.selectedPiece)}><Plus /></button></div>
               </div>
               <button className="remove-line" onClick={() => remove(line.product.id, line.selectedColor, line.selectedPiece)} aria-label="Supprimer"><Trash2 /></button>
             </article>
           ))}
         </div>
-        {lines.length > 0 && <div className="drawer-total"><div><span>Sous-total</span><strong>{money(total)}</strong></div><p>Livraison calculée à l'étape suivante.</p><Link to="/commande" className="button primary full" onClick={() => setOpen(false)}>Passer la commande <ArrowRight /></Link><button className="text-button" onClick={() => setOpen(false)}>Continuer mes achats</button></div>}
+        {lines.length > 0 && <div className="drawer-total"><div><span>Sous-total</span><strong data-no-translate>{money(total)}</strong></div><p>Livraison calculée à l'étape suivante.</p><Link to="/commande" className="button primary full" onClick={() => setOpen(false)}>Passer la commande <ArrowRight /></Link><button type="button" className="text-button" onClick={() => setOpen(false)}>Continuer mes achats</button></div>}
       </aside>
     </>
   );
