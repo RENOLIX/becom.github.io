@@ -310,6 +310,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
     applyLanguage(root, effectiveLanguage);
     document.documentElement.classList.remove("language-preload");
+    if (effectiveLanguage === "fr") return;
     const observer = new MutationObserver(() => applyLanguage(root, effectiveLanguage));
     observer.observe(root, { childList: true, subtree: true, characterData: true });
     return () => observer.disconnect();

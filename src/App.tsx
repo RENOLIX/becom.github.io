@@ -559,17 +559,32 @@ function Dashboard() {
     const retry = window.setTimeout(() => { void refreshData(); }, 650);
     return () => window.clearTimeout(retry);
   }, [refreshData]);
-  const revenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const average = orders.length ? Math.round(revenue / orders.length) : 0;
-  const pending = orders.filter((order) => order.status !== "done").length;
+  const statusLabels: Record<OrderStatus, string> = { new: "Nouvelles", progress: "En cours", done: "Terminées", return: "Retours", cancelled: "Annulées" };
+  const statusCounts = orders.reduce<Record<OrderStatus, number>>((counts, order) => {
+    counts[order.status] += 1;
+    return counts;
+  }, { new: 0, progress: 0, done: 0, return: 0, cancelled: 0 });
+  const completedOrders = orders.filter((order) => order.status === "done");
+  const revenue = completedOrders.reduce((sum, order) => sum + order.total, 0);
+  const average = completedOrders.length ? Math.round(revenue / completedOrders.length) : 0;
+  const pending = statusCounts.new + statusCounts.progress;
   const lowStock = products.filter((product) => product.stock <= 3).length;
   const latestOrders = orders.slice(0, 4);
   return <>
     <div className="metric-grid">
-      <div><span>Chiffre d'affaires</span><strong>{money(revenue)}</strong><small>{orders.length ? "Total des commandes" : "Aucune vente"}</small></div>
+      <div><span>Chiffre d'affaires</span><strong>{money(revenue)}</strong><small>{completedOrders.length ? "Commandes terminées uniquement" : "Aucune commande terminée"}</small></div>
       <div><span>Commandes</span><strong>{orders.length}</strong><small>{pending ? `${pending} à traiter` : orders.length ? "Toutes traitées" : "Aucune commande"}</small></div>
-      <div><span>Panier moyen</span><strong>{money(average)}</strong><small>{orders.length ? "Calculé depuis Supabase" : "Pas encore calculé"}</small></div>
+      <div><span>Panier moyen</span><strong>{money(average)}</strong><small>{completedOrders.length ? "Sur les commandes terminées" : "Pas encore calculé"}</small></div>
       <div><span>Alertes</span><strong>{lowStock}</strong><small>{lowStock ? "Stocks faibles" : "Tout est prêt"}</small></div>
+    </div>
+    <div className="status-summary-grid">
+      {(Object.keys(statusLabels) as OrderStatus[]).map((status) => (
+        <div className={status} key={status}>
+          <span>{statusLabels[status]}</span>
+          <strong>{statusCounts[status]}</strong>
+          <small>{statusCounts[status] === 1 ? "commande" : "commandes"}</small>
+        </div>
+      ))}
     </div>
     <div className="admin-empty-state dashboard-orders">
       <PackageCheck />
@@ -580,7 +595,7 @@ function Dashboard() {
             <div key={order.id}>
               <strong>{order.customerName}</strong>
               <span>{order.wilaya} · {money(order.total)}</span>
-              <em className={order.status}>{order.status === "new" ? "Nouvelle" : order.status === "progress" ? "En cours" : "Terminée"}</em>
+              <em className={order.status}>{order.status === "new" ? "Nouvelle" : order.status === "progress" ? "En cours" : order.status === "done" ? "Terminée" : order.status === "return" ? "Retour" : "Annulée"}</em>
             </div>
           ))}
         </div>

@@ -185,6 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [shippingRates, setShippingRates] = useState<ShippingRate[]>(defaultShippingRates);
   const [syncMode, setSyncMode] = useState<"connecting" | "supabase" | "error">("connecting");
   const hasSynced = useRef(false);
+  const pendingOrderStatuses = useRef(new Map<string, OrderStatus>());
 
   const syncPublicData = useCallback(async () => {
     await Promise.all([
@@ -226,7 +227,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
     await supabaseRequest<Record<string, unknown>[]>("orders?select=*&order=created_at.desc")
         .then((remoteOrders) => {
-          setOrders(remoteOrders.map(fromOrderRow));
+          const nextOrders = remoteOrders.map(fromOrderRow).map((order) => {
+            const pendingStatus = pendingOrderStatuses.current.get(order.id);
+            if (!pendingStatus) return order;
+            if (order.status === pendingStatus) pendingOrderStatuses.current.delete(order.id);
+            return { ...order, status: pendingStatus };
+          });
+          setOrders(nextOrders);
           setSyncMode("supabase");
         })
         .catch((error) => {
@@ -276,13 +283,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const updateOrderStatus = async (id: string, status: OrderStatus) => {
+    pendingOrderStatuses.current.set(id, status);
     setOrders((current) => current.map((order) => order.id === id ? { ...order, status } : order));
     try {
-      await supabaseRequest(`orders?id=eq.${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ status }) });
+      const [saved] = await supabaseRequest<Record<string, unknown>[]>(`orders?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ status }),
+      });
+      if (saved) {
+        const savedOrder = fromOrderRow(saved);
+        setOrders((current) => current.map((order) => order.id === id ? savedOrder : order));
+        if (savedOrder.status === status) pendingOrderStatuses.current.delete(id);
+      }
       setSyncMode("supabase");
     } catch (error) {
+      pendingOrderStatuses.current.delete(id);
       console.error("Supabase order status update failed", error);
       setSyncMode("error");
+      await syncAdminData();
       throw error;
     }
   };
